@@ -1073,7 +1073,7 @@ func _run() -> void:
 		gp._unit.die()
 		gp.free()
 
-	# ---------- glTF unit models (res://Players) ----------
+	# ---------- glTF unit models (res://assets/Players) ----------
 	var rig_ok := true
 	for st: UnitStats in [tank_stats, how_stats, inf_stats]:
 		rig_ok = rig_ok and UnitModel.has_model(st.model)

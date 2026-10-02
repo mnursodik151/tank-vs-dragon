@@ -1,13 +1,13 @@
 class_name UiTheme
 extends RefCounted
-## One place for the look of the UI: the pixel font (m6x11plus) and the Flat_Theme sprites (res://UI/Flat_Theme/Sprites),
+## One place for the look of the UI: the pixel font (m6x11plus) and the Flat_Theme sprites (res://assets/UI/Flat_Theme/Sprites),
 ## drawn as 9-slice boxes that can be tinted. Every custom `_draw` control goes through this.
 ##
 ## m6x11plus is a pixel font whose native grid is 16 px (and 32, 48 ...; other sizes smear): `fs()` folds every size the
 ## layout code asks for into SMALL or LARGE. Pixel art stays crisp only at whole-number scales too (see `snap_scale`).
 
-const FONT_PATH := "res://UI/Fonts/ThaleahFat.ttf"
-const SPRITE_PATH := "res://UI/Flat_Theme/Sprites/UI_Flat_%s.png"
+const FONT_PATH := "res://assets/UI/Fonts/ThaleahFat.ttf"
+const SPRITE_PATH := "res://assets/UI/Flat_Theme/Sprites/UI_Flat_%s.png"
 const SMALL := 16
 const LARGE := 32
 const LARGE_FROM := 22     ## requested sizes at or above this become LARGE

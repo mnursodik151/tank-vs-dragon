@@ -1,15 +1,15 @@
 class_name HeroRig
 extends SoldierRig
-## An animated KayKit Adventurers character (res://Players/Model/KayKit_Adventurers_2.0_FREE) for the fantasy faction: the mage, the ranger
+## An animated KayKit Adventurers character (res://assets/Players/Model/KayKit_Adventurers_2.0_FREE) for the fantasy faction: the mage, the ranger
 ## and the knight who pushes the octo cannon. Unlike the Stylized Soldier these glTF characters already carry the Rig_Medium skeleton, so
-## there is nothing to rig: the model is instanced as it is, the clips of the Rig_Medium packs (res://Animations, the same ones the soldier
+## there is nothing to rig: the model is instanced as it is, the clips of the Rig_Medium packs (res://assets/Animations, the same ones the soldier
 ## uses) are copied into one AnimationLibrary per profile, and the held item (staff / bow, from the Fantasy Weapons Bits pack) hangs on a
 ## BoneAttachment3D at the hand slot, so it follows the animation.
 ## Same interface as SoldierRig (it IS one, so `Unit` drives it unchanged): `set_state(State.X)`, plus AIM (draw / raise before a shot).
 ## Rig space is the character's own: feet on y 0, the character faces +Z, about 2.3 units tall (a Unit scales it).
 
-const CHARACTERS := "res://Players/Model/KayKit_Adventurers_2.0_FREE/Characters/gltf/%s.glb"
-const WEAPON_BITS := "res://Players/Weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/%s.gltf"
+const CHARACTERS := "res://assets/Players/Model/KayKit_Adventurers_2.0_FREE/Characters/gltf/%s.glb"
+const WEAPON_BITS := "res://assets/Players/Weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/%s.gltf"
 
 ## profile -> {character, hand (bone the item hangs on), item (Weapon Bits stem), item_yaw (degrees), clips {State: [pack, clip, loops]},
 ## move_speed (ground speed the walk / run clip is made for, m/s at the unit's scale), push (arms forward, see PushPose)}

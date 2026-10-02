@@ -6,16 +6,5 @@
 /build/
 /android/
 
-# Third-party asset packs (not redistributed here; see CREDITS.md for sources and licences)
-/Animations/
-/FBX/
-/FBX (Unity)/
-/Hexagon Pack/
-/OBJ/
-/Players/
-/Textures/
-/UI/
-/glTF/
-/Preview_*.jpg
-/Preview_*.jpg.import
-/License_Standard.txt
+# All assets (third-party packs: models, animations, UI, textures). Not redistributed here; see CREDITS.md for sources and licences.
+/assets/

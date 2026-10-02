@@ -1,10 +1,13 @@
 # Tactics Proto – Implementation Notes
 
-Godot 4.7.2, GDScript, Jolt physics, GL Compatibility. No git repo. Window 1280x720.
+Godot 4.7.2, GDScript, Jolt physics, GL Compatibility. Git repo (origin git@github.com:mnursodik151/tank-vs-dragon.git). Window 1280x720.
 Godot binary (console build): `D:\Projects\godot-windows-64-stable\Godot_v4.7.2-stable_win64_console.exe`
 (run `--headless --path . --import --quit` once after adding a `class_name` script so the class cache updates).
 Shell note: Git-bash here has Python 2 (`python`) and no `python3` - use the Edit tool / sed / awk for edits.
 Avoid `%g` in GDScript format strings (unsupported). Avoid naming variables `round` (shadows the built-in).
+**Assets**: every third-party asset lives under `res://assets/` (Animations, FBX, "FBX (Unity)", "Hexagon Pack", OBJ, Players, Textures, UI, glTF, previews)
+and the whole folder is gitignored (`/assets/`); `CREDITS.md` has sources and licences. Keep new assets there. After moving assets, fix the `source_file`
+paths inside the `.import` files and re-run `--import` (the editor must be closed). Unused FBX/OBJ exports log harmless `C:/` texture warnings on import.
 
 ## Detail docs (code-level snapshots, Rev 7; Rev 9 pack passes noted in gamestate-and-scene-manager.md)
 - [gamestate-and-scene-manager.md](gamestate-and-scene-manager.md) - Game bootstrap, BattleContext, TurnManager loop, GameState/ShotRecord, SceneComposer, Atmosphere.
@@ -244,7 +247,7 @@ traverse, T ammo, C charge, hold Space power / release fire, Esc or right click 
 - Pack lives in `Hexagon Pack/` (glTF used only; `.gdignore` in its `fbx`, `fbx(unity)`, `obj` folders keeps Godot from importing the copies). Tile = 2.0 m flat-to-flat / 2.31 point-to-point, the game hex is 1.73 / 2.0,
   and tanks are 1.2 m wide, so pack models are NOT used at native size: each kind has `scale` (native multiplier, houses 1.6, walls 1.0, supplies 3.0, ...) clamped by the height/width box (`Props.INFO`).
 - `Props.Kind` gained BUILDING, WALL, FENCE, RUIN, SUPPLY, TENT, FOREST (appended: stored values stay valid). Pack models also joined existing kinds: `tree_single_A/B` (TREE, own copse family), `mountain_A/B/C` (ROCK_LARGE),
-  `rock_single_A-E` (ROCK_SMALL). `Props.scene_path(stem)` resolves res://glTF or the pack (folder table `PACK_FOLDERS`; buildings = `building_<type>_<colour>` in a folder per colour, 4 colours x 16 types in `BUILDING_MODELS`).
+  `rock_single_A-E` (ROCK_SMALL). `Props.scene_path(stem)` resolves res://assets/glTF or the pack (folder table `PACK_FOLDERS`; buildings = `building_<type>_<colour>` in a folder per colour, 4 colours x 16 types in `BUILDING_MODELS`).
   Not used: castle (2+ hexes), watermill (needs a river), gates, corner walls, flags, hills/mountain-with-grass variants (the game has its own elevation), clouds, tiles (roads / rivers / coast).
 - New INFO keys: `scale`, `center` (pack buildings keep their authored origin), `cluster` (N scattered items: pebbles, supplies), `line` + `yaw_offset` (walls/fences follow the composer's line yaw), `yaw_step` (buildings snap to 60 degrees), `jitter`.
   Stats: BUILDING hp 36 cover 0.7 LoS r 0.85, WALL hp 30, WOODS hp 24 LoS r 0.95, TENT (really an open canopy) LoS r 0.5, RUIN / SUPPLY / FENCE low and see-through. LoS occluders now ~40-50 on a map (shader cap 64: `wood_cells` kept at 2-3, smoke test checks it).
@@ -252,7 +255,7 @@ traverse, T ammo, C charge, hold Space power / release fire, Esc or right click 
 - `GridBoard.add_prop(c, kind, model, yaw)`, `prop_yaw(c)`; layout prop = `[kind, cell, model]` or `[kind, cell, model, yaw]`. Composer passes: see gamestate-and-scene-manager.md "Hexagon Pack passes".
 - Ideas next: roads as a cheap-AP terrain and rivers/water as obstacles (pack tiles), team banners at spawns (flags), a castle objective (multi-hex props), rubble left when a building is destroyed.
 
-## Rev 10: glTF unit models (res://Players) - `scripts/units/unit_model.gd`
+## Rev 10: glTF unit models (res://assets/Players) - `scripts/units/unit_model.gd`
 - Mapping (user's choice): **Sherman = Tank, "Stylized tank" = Howitzer, Stylized Soldier2 = Infantry**; bazooka = RPG, M-16 = Rifle, tank shell = projectile of every GUNNERY weapon (burst bullets stay coloured dots). `UnitStats.model` / `WeaponStats.model` carry the ids ("sherman", "howitzer", "soldier"; "bazooka", "rifle"); empty = the old placeholder boxes.
 - `UnitModel.MODELS` describes each model in its own space: scale, yaw (Sherman faces +Z already, the howitzer faces -X so yaw 90 deg), turret ring x/z, barrel trunnion, and how to split it. Rig space: +Z forward, body origin = turret ring axis, lowest hull point on the collider's floor.
   The Sherman is ONE mesh, so `_cut_mesh` splits its triangles by position (above y 180 = turret; thin and ahead of z 128 = barrel) into compact ArrayMeshes, cached per model (first unit pays ~0.1 s, restarts are free). The howitzer is split by mesh name (turret = casemate + sights, barrel = Final_013; its gun is modelled
@@ -268,8 +271,8 @@ traverse, T ammo, C charge, hold Space power / release fire, Esc or right click 
   tiles around the board (top at y -0.3, so a shore shows a bit of tile side). One MultiMesh per tile type (3 draw calls). Colliders are unchanged (the per-level convex prisms); only the old vertex-coloured prism mesh was dropped,
   so the hill tint, grey cliff faces and brown slope sides are gone (cliffs are now plain tile sides). Tiles are darkened (`TILE_TONE` 0.86, `WATER_TONE` 0.68) via a material copy. Terrain patches (rough / crater / fire), highlights and the grid still draw over the tops.
   Unused pack tiles: coast, rivers, roads, sloped grass (slopes are directional ramps, the game's elevation is stepped) - roads as cheap-AP terrain and rivers as obstacles are the obvious next uses.
-- **Trees / rocks**: the old res://glTF trees (CommonTree, Pine, TwistedTree, DeadTree) and rocks (Rock_Medium, Pebble_*) are no longer referenced: TREE = `tree_single_A/B` (scale 2.0, ~2.4 m), ROCK_LARGE = `mountain_A/B/C`,
-  ROCK_SMALL = `rock_single_A-E` (cluster of 3, scale 2.0 capped at 0.8 m wide), copses use the single family "tree_single". **Bushes still use the old res://glTF models** (the pack has none) - the red autumn ones in particular clash with the pack palette.
+- **Trees / rocks**: the old res://assets/glTF trees (CommonTree, Pine, TwistedTree, DeadTree) and rocks (Rock_Medium, Pebble_*) are no longer referenced: TREE = `tree_single_A/B` (scale 2.0, ~2.4 m), ROCK_LARGE = `mountain_A/B/C`,
+  ROCK_SMALL = `rock_single_A-E` (cluster of 3, scale 2.0 capped at 0.8 m wide), copses use the single family "tree_single". **Bushes still use the old res://assets/glTF models** (the pack has none) - the red autumn ones in particular clash with the pack palette.
   (Rev 12 then removed the bushes and the foliage shader altogether.)
 
 ## Rev 12: bigger map, river + roads (pack tiles), bushes gone
@@ -289,11 +292,11 @@ traverse, T ammo, C charge, hold Space power / release fire, Esc or right click 
 - **`HexTiles`** (`hex_tiles.gd`): edge masks (bit k = neighbour `GridBoard.DIRS[k]`) of every pack road / river tile, measured by rendering them (dead end, straight, 2 bends, all junctions, star; rotation r moves bit k to k+r, yaw r*60 deg), crossing tiles carry river+road masks. `BoardView._tile_for` picks road / river / crossing / grass per cell
   from the neighbours at build time; lakes would work too (all-wet neighbours = star tile). A river cell with one open edge gets the straight tile. Coast tiles and sloped tiles are still unused.
 - **Bushes removed** (`Props.Kind.BUSH` deleted; enum values shifted). Replaced by **GROVE** (`trees_A/B_small`, LoS radius 0.55, hug trees/rocks like bushes did) and **STUMPS** (`tree_single_A/B_cut`, cluster of 3, see-through); FOREST now only uses the medium/large clusters. `shaders/foliage.gdshader` and the foliage shading in PropView are gone;
-  `res://glTF` is no longer referenced by any script (only `Props.scene_path` still falls back to it for unknown stems) - the old glTF/FBX/OBJ/Textures folders can be deleted.
+  `res://assets/glTF` is no longer referenced by any script (only `Props.scene_path` still falls back to it for unknown stems) - the old glTF/FBX/OBJ/Textures folders can be deleted.
 - Tests: spawn-dependent cells moved (scout sight line, fall-off cell (27,7), hilly reserved list), prop raycasts shoot straight down (neighbouring groves broke the sideways ray), new checks for road cost, wading cost, bridge preference, water immune to craters/fire, tile masks, bridge models, composer rivers (4 seeds) and a tank wading in the live scene.
 
 ## Rev 13: animated soldier (KayKit Rig_Medium clips on the unrigged Stylized Soldier2) - `scripts/units/soldier_rig.gd`
-- The soldier mesh is ONE static T-pose mesh with no skeleton, so the user's humanoid animation pack (`res://Animations`, KayKit Character Animations 1.1, CC0) is applied by rigging it at runtime (`SoldierRig`, nothing baked):
+- The soldier mesh is ONE static T-pose mesh with no skeleton, so the user's humanoid animation pack (`res://assets/Animations`, KayKit Character Animations 1.1, CC0) is applied by rigging it at runtime (`SoldierRig`, nothing baked):
   1. the 23-bone Rig_Medium skeleton (names, parents, **rest rotations** - the clips are authored against them) is read from `Rig_Medium_General.glb`; only the rest POSITIONS are replaced by the soldier's chibi joints (`JOINTS`, model space: arm span 0.9, legs 0.4, head 0.34 for a 1.0 tall body);
   2. `_skin_mesh` auto-skins by distance to bone segments (`_segments`): nearest bone = 1, bones within `SKIN_BLEND` (0.04) fade in quadratically, 4 influences, left/right bones only move their own half. Overrides found by looking at renders: everything above y 0.13 inside x 0.25 = head (helmet flaps), vertices behind z -0.11 ignore the arm bones (the pack),
      a snout segment keeps the gas mask on the head. First rig of a run costs ~0.1 s (skinning + library), then cached and shared; each soldier owns only Skeleton3D + MeshInstance3D + AnimationPlayer;
@@ -329,10 +332,10 @@ traverse, T ammo, C charge, hold Space power / release fire, Esc or right click 
 - Ideas not done: ghost ticks on the dial / power bar / radar for the last shot's elevation, power and yaw; last-known "ghost" markers for hidden enemies; AI reacting to incoming fire direction; sidebar for a different unit's / team's last shot.
 
 ## Rev 15: pixel UI - m6x11plus font + Flat_Theme sprites (`scripts/ui/ui_theme.gd`, `UiTheme`)
-- **Font**: `res://UI/Fonts/m6x11plus.ttf` (import: no antialiasing / hinting / subpixel). Its native grid is **16 px** (also 32, 48): 11 px, 12 px etc. smear (checked with a size ladder render). `UiTheme.SMALL` = 16, `LARGE` = 32;
+- **Font**: `res://assets/UI/Fonts/m6x11plus.ttf` (import: no antialiasing / hinting / subpixel). Its native grid is **16 px** (also 32, 48): 11 px, 12 px etc. smear (checked with a size ladder render). `UiTheme.SMALL` = 16, `LARGE` = 32;
   `UiTheme.fs(requested)` folds any requested size (the old 9-16 / 22 / 26 literals in the draw code) into SMALL, or LARGE from 22 up. Also set as the project default (`gui/theme/custom_font`), canvas default texture filter = nearest.
   Labels (HUD, toolbar AP/notice) use 16 with a 4 px outline; 3D labels via `UiTheme.style_label3d` (unit label 48, popups / guide label 32, nearest filtering). HUD is split into status lines + help lines (two Labels in a VBox, both 16).
-- **Sprites**: `UiTheme.box(sprite, margin, tint)` = cached `StyleBoxTexture` from `res://UI/Flat_Theme/Sprites/UI_Flat_<name>.png` (9-slice), `draw_box(canvas, ...)`, `draw_panel(canvas, rect, depth)` (Frame01a tinted slate; depth 1 = darker inset).
+- **Sprites**: `UiTheme.box(sprite, margin, tint)` = cached `StyleBoxTexture` from `res://assets/UI/Flat_Theme/Sprites/UI_Flat_<name>.png` (9-slice), `draw_box(canvas, ...)`, `draw_panel(canvas, rect, depth)` (Frame01a tinted slate; depth 1 = darker inset).
   Used for: gunnery panel window + wind box + sidebar + hit view (panels), round buttons (`Button01a_4` raised and tinted with the round colour when selected, `Button01a_1` flat dark otherwise), charge pips (`Button02a_*`, red tint when unaffordable), power bar (`Bar07a` track + own dark groove + fill),
   toolbar slots (`FrameSlot01a` tinted slate / lighter on hover, `FrameSlot03a` = the sheet's orange when selected, with dark ink), wind indicator, shot review (map frame, list, details). Not used yet: banners, selection corners (`Select*`), toggles, icons, `Bar*`/`BarFill*` other than Bar07a (HP bars would fit them).
   Sprite sheet knowledge: Frame01a/02a/03a = grey/blue/orange 96x64 windows, FrameSlot0Xa/b/c = normal / hover-ish / disabled 32x32, Button01a/02a_1..4 = cream keys with a bottom shade growing 1 -> 4, Bar05..13 = tracks with a groove, BarFill01a-g = 32x3 coloured lines.
@@ -386,7 +389,7 @@ ranger with a bow instead of the infantry; same trajectory system, different amm
   Projectile looks: `UnitModel.make_projectile(id, length)` (fireball / meteor / hail = glowing spheres, bolt = arrow_B, arrow = arrow_A from the Fantasy Weapons Bits, "shell" = tank shell); `Shell.launch(..., projectile)`.
   AI `_pick_round`: AIRBURST counts as cluster (vs infantry), METEOR as the incendiary (20 %), best penetration = ballista as before.
 - **Models**: `HeroRig` (extends `SoldierRig`, so `Unit._rig` / `set_state` / death linger work unchanged; `SoldierRig._ready` now calls `_start()`, `State` gained AIM): KayKit Adventurers `Mage/Ranger/Knight.glb` are already on the Rig_Medium skeleton - instanced as they are, the clips of
-  `res://Animations` (same packs as the soldier) in one library per profile (`HeroRig.PROFILES`), item on a `BoneAttachment3D` (staff_B at `handslot.r`, bow_A_withString at `handslot.l` yawed -90, Weapon Bits pack). States: IDLE / MOVE / AIM (draw / raise, held) / FIRE (release / shoot) / HIT / DEATH;
+  `res://assets/Animations` (same packs as the soldier) in one library per profile (`HeroRig.PROFILES`), item on a `BoneAttachment3D` (staff_B at `handslot.r`, bow_A_withString at `handslot.l` yawed -90, Weapon Bits pack). States: IDLE / MOVE / AIM (draw / raise, held) / FIRE (release / shoot) / HIT / DEATH;
   `Unit.begin_aim()` is called by `ShootAction` before the aim settle, `play_fire` at launch, `lower_barrel` drops AIM back to IDLE. Weapon pitch is NOT visible on heroes (weapon is on the hand). Model entries "mage"/"ranger" have `"hero"` (muzzle = `barrel_pivot` in character units; scale .55).
   **Octo cannon** ("octo", model faces +X -> yaw -90 deg, scale .0062): base = TURRET (so cannon + knight turn with the aim; the empty HULL keeps the heading for armor sectors), cannon + octopus = BARREL (barrel axis is 27.45 deg raised in the file -> `rest_pitch_deg`, trunnion (8, 53)).
   The **knight** is the unit's `_rig` ("crew" in the model entry, offset 1.4 m behind, scale .5): walks (Walking_B) while the cannon moves, staggers (Hit_B) on each shot, dies with it; `HeroRig.PushPose` (SkeletonModifier3D) holds both arms forward while IDLE/MOVE (checked on renders only: `get_bone_global_pose` does not show modifier output).

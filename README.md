@@ -64,7 +64,7 @@ scripts/
   core/         game.gd (bootstrap), GridBoard (hex maths, terrain, craters, fire, Dijkstra, resync), Terrain,
 				Props / PropView (Hexagon Pack trees, rocks, buildings... + colliders), HexTiles (road / river tile masks), BoardView (floor/obstacles/grid + live terrain patches), GuideView, TurnManager, BattleContext,
 				TacticsCamera (+ shot camera), GameState / ShotRecord, ShotTrail, FloatingText
-  units/        Unit (RigidBody3D, armor + burning), UnitModel (glTF hull / turret / barrel rigs from Players/), UnitStats, WeaponStats, RoundStats, HitResult (Resources / data)
+  units/        Unit (RigidBody3D, armor + burning), UnitModel (glTF hull / turret / barrel rigs from assets/Players/), UnitStats, WeaponStats, RoundStats, HitResult (Resources / data)
   combat/       Ballistics (solvers + tracer), Wind, FireParams (weapon, ammo, charge, yaw/pitch/power),
 				Shell (raycast-stepped, trail), Explosion (armor, damage, craters, fire, cluster)
   actions/      Action, MoveAction, DashAction (ram), ShootAction (gunnery + burst + camera + logging)

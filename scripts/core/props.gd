@@ -1,6 +1,6 @@
 class_name Props
 extends RefCounted
-## Catalogue of map props built from the KayKit Medieval Hexagon Pack (res://Hexagon Pack) - trees, rocks, buildings, walls... -
+## Catalogue of map props built from the KayKit Medieval Hexagon Pack (res://assets/Hexagon Pack) - trees, rocks, buildings, walls... -
 ## Model names are the glTF file stems ("tree_single_A", "building_home_A_red", ...), so map data
 ## reads like "tree_single_A at (5, 5)"; `scene_path` finds the file for either source.
 ## Every prop occupies (blocks) its hex. Props with `los_radius` > 0 (trees, large rocks, buildings, walls, woods, tents)
@@ -9,8 +9,8 @@ extends RefCounted
 
 enum Kind { TREE, ROCK_LARGE, ROCK_SMALL, BUILDING, WALL, FENCE, RUIN, SUPPLY, TENT, FOREST, GROVE, STUMPS }
 
-const MODEL_DIR := "res://glTF/"
-const PACK_DIR := "res://Hexagon Pack/Assets/gltf/"
+const MODEL_DIR := "res://assets/glTF/"
+const PACK_DIR := "res://assets/Hexagon Pack/Assets/gltf/"
 const META_CELL := "prop_cell"   ## metadata on a prop's StaticBody3D: the axial cell it stands on
 
 const TREE_MODELS: Array[String] = ["tree_single_A", "tree_single_B"]   # Hexagon Pack pines
@@ -155,7 +155,7 @@ static func map_color(kind: Kind) -> Color:
 	return INFO[kind]["map_color"]
 
 
-## The glTF file of a model stem: a pack model (nature, props, neutral and coloured buildings) or one from res://glTF.
+## The glTF file of a model stem: a pack model (nature, props, neutral and coloured buildings) or one from res://assets/glTF.
 static func scene_path(model: String) -> String:
 	if _pack_folder.is_empty():
 		for folder: String in PACK_FOLDERS:

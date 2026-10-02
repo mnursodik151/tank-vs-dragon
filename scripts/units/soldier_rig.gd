@@ -1,7 +1,7 @@
 class_name SoldierRig
 extends Node3D
 ## Gives the (unrigged, T-pose) Stylized Soldier2 mesh a skeleton and plays the generic humanoid animations (KayKit Rig_Medium,
-## res://Animations) on it. Nothing is baked: the first rig of a game
+## res://assets/Animations) on it. Nothing is baked: the first rig of a game
 ##   1. reads the 23-bone Rig_Medium skeleton out of an animation file (names, hierarchy, rest ROTATIONS - the animations are
 ##      authored against those) and moves its joints to the soldier's own (chibi) proportions, `JOINTS`;
 ##   2. skins the mesh: every vertex is weighted to the bones whose segment (`SEGMENTS`) is nearest to it (see `_skin_mesh`);
@@ -13,8 +13,8 @@ extends Node3D
 
 enum State { IDLE, MOVE, FIRE, HIT, DEATH, AIM }   ## AIM (draw the bow / raise the staff before a shot) only exists for HeroRig
 
-const TEMPLATE := "res://Animations/Animations/gltf/Rig_Medium/Rig_Medium_General.glb"
-const ANIM_DIR := "res://Animations/Animations/gltf/Rig_Medium/Rig_Medium_%s.glb"
+const TEMPLATE := "res://assets/Animations/Animations/gltf/Rig_Medium/Rig_Medium_General.glb"
+const ANIM_DIR := "res://assets/Animations/Animations/gltf/Rig_Medium/Rig_Medium_%s.glb"
 
 ## State -> [animation pack, clip, loops]. The clip names are the KayKit ones.
 const CLIPS := {

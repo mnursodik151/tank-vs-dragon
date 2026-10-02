@@ -7,7 +7,7 @@ extends RefCounted
 ## Roads and rivers share the masks; the two crossing tiles carry a river mask AND a road mask (their road stops at the banks:
 ## the bridge models fill the gap).
 
-const DIR := "res://Hexagon Pack/Assets/gltf/"   ## tile and model paths below are relative to this
+const DIR := "res://assets/Hexagon Pack/Assets/gltf/"   ## tile and model paths below are relative to this
 
 ## tile (relative to DIR, no extension) -> edge mask
 const ROADS := {

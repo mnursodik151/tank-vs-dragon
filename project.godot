@@ -25,7 +25,7 @@ window/size/viewport_height=720
 
 [gui]
 
-theme/custom_font="res://UI/Fonts/ThaleahFat.ttf"
+theme/custom_font="res://assets/UI/Fonts/ThaleahFat.ttf"
 
 [layer_names]
 

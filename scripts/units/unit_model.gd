@@ -1,6 +1,6 @@
 class_name UnitModel
 extends RefCounted
-## Unit visuals from the glTF models in res://Players. A model is cut into the three moving parts a Unit has - the HULL (turns to
+## Unit visuals from the glTF models in res://assets/Players. A model is cut into the three moving parts a Unit has - the HULL (turns to
 ## the travel direction), the TURRET (turns to the aim) and the BARREL (pitches) - either by mesh part name or, for a model that is
 ## one single mesh (the Sherman), by cutting its triangles by position. Cut meshes are cached, so only the first unit of a model pays.
 ##
@@ -22,20 +22,20 @@ enum Group { HULL, TURRET, BARREL }
 
 const MODELS := {
 	"sherman": {
-		"scene": "res://Players/Model/sherman_tank_-_stylised_blender_lowpoly_ww2/scene.gltf",
+		"scene": "res://assets/Players/Model/sherman_tank_-_stylised_blender_lowpoly_ww2/scene.gltf",
 		"scale": 0.0037, "yaw": 0.0,
 		"turret_pivot": Vector3(0.0, 0.0, -20.0), "barrel_pivot": Vector3(0.0, 226.0, 130.0),
 		"cut": {"turret_min_y": 180.0, "barrel_max_abs_x": 14.0, "barrel_min_z": 128.0},
 	},
 	"howitzer": {
-		"scene": "res://Players/Model/stylized_tank/scene.gltf",
+		"scene": "res://assets/Players/Model/stylized_tank/scene.gltf",
 		"scale": 0.00085, "yaw": PI / 2.0,
 		"turret_pivot": Vector3(31.0, 0.0, 0.0), "barrel_pivot": Vector3(-400.0, 1257.0, 0.0), "rest_pitch_deg": 16.1,
 		"turret_parts": ["Final_010_", "Final_011_", "Final_012_", "Final_014_", "Final_015_", "Final_016_"],
 		"barrel_parts": ["Final_013_"],
 	},
 	"soldier": {
-		"scene": "res://Players/Model/stylized_soldier2/scene.gltf",
+		"scene": "res://assets/Players/Model/stylized_soldier2/scene.gltf",
 		"scale": 1.3, "yaw": 0.0,
 		"turret_pivot": Vector3(0.0, 0.0, 0.0), "barrel_pivot": SoldierRig.READY_MOUNT,
 		"rig": true,
@@ -44,7 +44,7 @@ const MODELS := {
 	# The octo cannon faces +X in its own space (yaw -90 deg puts that on +Z). The carriage turns with the aim (it is the TURRET, so the
 	# hull stays an empty heading marker for the armor sectors), the barrel with the octopus clinging to it pitches around the trunnion.
 	"octo": {
-		"scene": "res://Players/Model/octo_cannon/scene.gltf",
+		"scene": "res://assets/Players/Model/octo_cannon/scene.gltf",
 		"scale": 0.0062, "yaw": -PI / 2.0,
 		"turret_pivot": Vector3(22.0, 0.0, 0.0), "barrel_pivot": Vector3(8.0, 53.0, 0.0), "rest_pitch_deg": 27.45,
 		"turret_parts": ["OctoCannon_TheBigCannonBase"],
@@ -52,12 +52,12 @@ const MODELS := {
 		"crew": {"profile": "knight", "scale": 0.5, "offset": Vector3(0.0, 0.0, -1.4)},
 	},
 	"mage": {
-		"scene": "res://Players/Model/KayKit_Adventurers_2.0_FREE/Characters/gltf/Mage.glb",
+		"scene": "res://assets/Players/Model/KayKit_Adventurers_2.0_FREE/Characters/gltf/Mage.glb",
 		"scale": 0.55, "yaw": 0.0, "hero": "mage",
 		"turret_pivot": Vector3.ZERO, "barrel_pivot": Vector3(0.0, 1.9, 1.0),
 	},
 	"ranger": {
-		"scene": "res://Players/Model/KayKit_Adventurers_2.0_FREE/Characters/gltf/Ranger.glb",
+		"scene": "res://assets/Players/Model/KayKit_Adventurers_2.0_FREE/Characters/gltf/Ranger.glb",
 		"scale": 0.55, "yaw": 0.0, "hero": "ranger",
 		"turret_pivot": Vector3.ZERO, "barrel_pivot": Vector3(0.0, 1.5, 1.0),
 	},
@@ -66,12 +66,12 @@ const MODELS := {
 ## Hand-held weapons: yaw turns the model's muzzle onto +Z, length is the muzzle-to-butt length in metres, grip the share of
 ## that length behind the pitch pivot.
 const WEAPONS := {
-	"bazooka": {"scene": "res://Players/Weapons/bazooka_stylized_toon/scene.gltf", "yaw": -PI / 2.0, "length": 0.9, "grip": 0.5},
-	"rifle": {"scene": "res://Players/Weapons/m-16_rifle/scene.gltf", "yaw": PI / 2.0, "length": 0.65, "grip": 0.45},
+	"bazooka": {"scene": "res://assets/Players/Weapons/bazooka_stylized_toon/scene.gltf", "yaw": -PI / 2.0, "length": 0.9, "grip": 0.5},
+	"rifle": {"scene": "res://assets/Players/Weapons/m-16_rifle/scene.gltf", "yaw": PI / 2.0, "length": 0.65, "grip": 0.45},
 }
 
-const SHELL_SCENE := "res://Players/Weapons/tank_shell_bullet/scene.gltf"
-const WEAPON_BITS := "res://Players/Weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/%s.gltf"
+const SHELL_SCENE := "res://assets/Players/Weapons/tank_shell_bullet/scene.gltf"
+const WEAPON_BITS := "res://assets/Players/Weapons/KayKit_FantasyWeaponsBits_1.0_FREE/Assets/gltf/%s.gltf"
 ## Magic projectiles (RoundStats.projectile): a glowing sphere, or a Weapon Bits model whose nose (+Z in the pack) is turned onto -Z.
 const PROJECTILES := {
 	"fireball": {"glow": Color(1.0, 0.45, 0.10), "core": Color(1.0, 0.92, 0.55), "size": 0.55},
