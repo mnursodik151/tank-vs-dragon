@@ -11,6 +11,7 @@ paths inside the `.import` files and re-run `--import` (the editor must be close
 **Web / itch.io**: `export_presets.cfg` has the "Web" preset (single-threaded, output `build/web/index.html`, `/build/` is gitignored) whose `exclude_filter`
 drops everything the game never loads (FBX/OBJ/Unity copies, mannequin, gun packs, previews, `tests/`). Export: `godot --headless --path . --export-release Web build/web/index.html`,
 then zip the folder contents (index.html at the zip root) and upload as an HTML5 project. Needs the 4.7.2 export templates (Editor > Manage Export Templates).
+**Web size**: the two tank models ship 4096 px textures (~100 MB in the pck), so every source texture > 1 MB under `assets/Players/*/textures` has `process/size_limit=1024` in its `.import` (pck 146 -> 44 MB, zip 38 MB). itch limits: <= 1000 files per zip, so zip only the 9 files of `build/web` (flat, index.html at the root).
 **Credits**: start menu CREDITS button -> `scripts/ui/credits_screen.gd` (data tables at the top; keep in step with `CREDITS.md`). QUIT is hidden on web.
 
 ## Detail docs (code-level snapshots, Rev 7; Rev 9 pack passes noted in gamestate-and-scene-manager.md)
