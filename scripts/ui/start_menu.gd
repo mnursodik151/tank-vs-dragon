@@ -116,9 +116,18 @@ func _build() -> void:
 	var start := UiTheme.button("START BATTLE", Color(0.55, 0.85, 0.55))
 	start.pressed.connect(_start)
 	col.add_child(start)
-	var quit := UiTheme.button("QUIT", SLATE, UiTheme.SMALL)
-	quit.pressed.connect(func() -> void: get_tree().quit())
-	col.add_child(quit)
+	var extras := HBoxContainer.new()
+	extras.add_theme_constant_override("separation", 8)
+	col.add_child(extras)
+	var credits := UiTheme.button("CREDITS", SLATE, UiTheme.SMALL)
+	credits.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	credits.pressed.connect(_show_credits)
+	extras.add_child(credits)
+	if not OS.has_feature("web"):    # a browser tab cannot be quit from the game
+		var quit := UiTheme.button("QUIT", SLATE, UiTheme.SMALL)
+		quit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		quit.pressed.connect(func() -> void: get_tree().quit())
+		extras.add_child(quit)
 	col.add_child(UiTheme.label("[Enter] start", Color(0.6, 0.65, 0.75), UiTheme.SMALL, HORIZONTAL_ALIGNMENT_CENTER))
 
 
@@ -201,6 +210,10 @@ func _style_swatch(s: Button, c: Color, selected: bool, taken: bool) -> void:
 		sb.set_border_width_all(4 if selected else 2)
 		sb.border_color = Color.WHITE if selected else Color(0.10, 0.11, 0.15)
 		s.add_theme_stylebox_override(state, sb)
+
+
+func _show_credits() -> void:
+	add_child(CreditsScreen.new())
 
 
 func _start() -> void:

@@ -8,6 +8,10 @@ Avoid `%g` in GDScript format strings (unsupported). Avoid naming variables `rou
 **Assets**: every third-party asset lives under `res://assets/` (Animations, FBX, "FBX (Unity)", "Hexagon Pack", OBJ, Players, Textures, UI, glTF, previews)
 and the whole folder is gitignored (`/assets/`); `CREDITS.md` has sources and licences. Keep new assets there. After moving assets, fix the `source_file`
 paths inside the `.import` files and re-run `--import` (the editor must be closed). Unused FBX/OBJ exports log harmless `C:/` texture warnings on import.
+**Web / itch.io**: `export_presets.cfg` has the "Web" preset (single-threaded, output `build/web/index.html`, `/build/` is gitignored) whose `exclude_filter`
+drops everything the game never loads (FBX/OBJ/Unity copies, mannequin, gun packs, previews, `tests/`). Export: `godot --headless --path . --export-release Web build/web/index.html`,
+then zip the folder contents (index.html at the zip root) and upload as an HTML5 project. Needs the 4.7.2 export templates (Editor > Manage Export Templates).
+**Credits**: start menu CREDITS button -> `scripts/ui/credits_screen.gd` (data tables at the top; keep in step with `CREDITS.md`). QUIT is hidden on web.
 
 ## Detail docs (code-level snapshots, Rev 7; Rev 9 pack passes noted in gamestate-and-scene-manager.md)
 - [gamestate-and-scene-manager.md](gamestate-and-scene-manager.md) - Game bootstrap, BattleContext, TurnManager loop, GameState/ShotRecord, SceneComposer, Atmosphere.
