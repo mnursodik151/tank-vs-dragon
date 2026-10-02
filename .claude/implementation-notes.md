@@ -1,6 +1,6 @@
 # Tactics Proto – Implementation Notes
 
-Godot 4.7.2, GDScript, Jolt physics, GL Compatibility. Git repo (origin git@github.com:mnursodik151/tank-vs-dragon.git). Window 1280x720.
+Godot 4.7.2, GDScript, Jolt physics, GL Compatibility. Git repo (origin https://github.com/mnursodik151/tank-vs-dragon.git). Window 1280x720.
 Godot binary (console build): `D:\Projects\godot-windows-64-stable\Godot_v4.7.2-stable_win64_console.exe`
 (run `--headless --path . --import --quit` once after adding a `class_name` script so the class cache updates).
 Shell note: Git-bash here has Python 2 (`python`) and no `python3` - use the Edit tool / sed / awk for edits.
