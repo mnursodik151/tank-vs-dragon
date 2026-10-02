@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="RoundStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="1_round"]
+
+[resource]
+script = ExtResource("1_round")
+display_name = "Hail"
+short_name = "HAIL"
+description = "Bursts in the air over the target and showers it with ice stones. Weak against armor."
+color = Color(0.6, 0.9, 1, 1)
+special = 4
+projectile = "hail"
+weight = 0.8
+damage_mult = 0.2
+radius_mult = 0.4
+penetration_mult = 0.3
+impulse_mult = 0.3
+direct_hit_mult = 1.0
+submunitions = 7
+spread = 3.4
+sub_damage = 1.6
+sub_radius = 0.8
+fuse_distance = 4.5

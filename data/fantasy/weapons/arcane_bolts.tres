@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="WeaponStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/weapon_stats.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+tracer_color = Color(0.8, 0.5, 1, 1)
+display_name = "Arcane Bolts"
+glyph = "bolts"
+aiming = 1
+ap_cost = 2.0
+muzzle_velocity = 60.0
+shell_radius = 0.04
+burst_rounds = 6
+round_interval = 0.07
+spread_deg = 1.2
+spread_growth_deg = 0.35
+min_range = 0.0
+max_range = 14.0
+penetration = 1.5
+blast_radius = 0.7
+blast_damage = 1.0
+blast_impulse = 1.5
+blast_lift = 0.1

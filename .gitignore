@@ -1,0 +1,21 @@
+# Godot 4+
+.godot/
+*.translation
+
+# Builds
+/build/
+/android/
+
+# Third-party asset packs (not redistributed here; see CREDITS.md for sources and licences)
+/Animations/
+/FBX/
+/FBX (Unity)/
+/Hexagon Pack/
+/OBJ/
+/Players/
+/Textures/
+/UI/
+/glTF/
+/Preview_*.jpg
+/Preview_*.jpg.import
+/License_Standard.txt

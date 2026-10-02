@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="RoundStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="1_round"]
+
+[resource]
+script = ExtResource("1_round")
+display_name = "Armor Piercing"
+short_name = "AP"
+description = "Heavy solid shot: punches through armor on a direct hit, tiny blast."
+color = Color(0.55, 0.8, 1, 1)
+special = 0
+weight = 1.35
+damage_mult = 0.55
+radius_mult = 0.55
+penetration_mult = 2.2
+impulse_mult = 0.6
+direct_hit_mult = 2.4

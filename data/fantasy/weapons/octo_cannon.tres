@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="WeaponStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/weapon_stats.gd" id="1_weapon"]
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="2_rscript"]
+[ext_resource type="Resource" path="res://data/fantasy/rounds/fireball.tres" id="3_r"]
+[ext_resource type="Resource" path="res://data/fantasy/rounds/meteor.tres" id="4_r"]
+[ext_resource type="Resource" path="res://data/fantasy/rounds/ballista.tres" id="5_r"]
+[ext_resource type="Resource" path="res://data/fantasy/rounds/hail.tres" id="6_r"]
+
+[resource]
+script = ExtResource("1_weapon")
+display_name = "Octo Cannon"
+glyph = "octo"
+aiming = 0
+ap_cost = 5.0
+muzzle_velocity = 18.0
+charge_levels = PackedFloat32Array(0.55, 0.8, 1)
+charge_ap_extra = 1.0
+min_power = 0.25
+pitch_min_deg = 35.0
+pitch_max_deg = 80.0
+default_pitch_deg = 55.0
+traverse_deg = 20.0
+charge_time = 2.0
+shell_radius = 0.14
+rounds = Array[ExtResource("2_rscript")]([ExtResource("3_r"), ExtResource("4_r"), ExtResource("5_r"), ExtResource("6_r")])
+aim_error_deg = 0.6
+min_range = 5.0
+max_range = 30.0
+high_arc = true
+penetration = 6.0
+blast_radius = 3.0
+blast_damage = 8.0
+blast_impulse = 18.0
+blast_lift = 0.5

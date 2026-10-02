@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Script" path="res://scripts/units/weapon_stats.gd" id="2_wscript"]
+[ext_resource type="Resource" path="res://data/fantasy/weapons/staff.tres" id="3_main"]
+[ext_resource type="Resource" path="res://data/fantasy/weapons/arcane_bolts.tres" id="4_aux"]
+
+[resource]
+script = ExtResource("1_stats")
+model = "mage"
+display_name = "Mage"
+kind = 1
+max_hp = 20
+max_ap = 8.0
+move_ap_per_weight = 1.0
+move_speed = 4.0
+initiative = 8
+mass = 6.0
+radius = 0.5
+height = 1.5
+armor_front = 12.0
+armor_side = 7.0
+armor_rear = 3.0
+sight_range = 9.6
+weapons = Array[ExtResource("2_wscript")]([ExtResource("3_main"), ExtResource("4_aux")])

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="RoundStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="1_round"]
+
+[resource]
+script = ExtResource("1_round")
+display_name = "Incendiary"
+short_name = "INC"
+description = "Light shell: sets the ground ablaze (fire spreads with the wind) and softens armor."
+color = Color(1, 0.45, 0.15, 1)
+special = 1
+weight = 0.85
+damage_mult = 0.5
+radius_mult = 1.2
+penetration_mult = 0.5
+impulse_mult = 0.5
+direct_hit_mult = 1.0

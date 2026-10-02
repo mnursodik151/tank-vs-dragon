@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="WeaponStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/weapon_stats.gd" id="1_weapon"]
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="2_rscript"]
+[ext_resource type="Resource" path="res://data/fantasy/rounds/arrow.tres" id="3_r"]
+
+[resource]
+script = ExtResource("1_weapon")
+display_name = "Longbow"
+model = ""
+glyph = "bow"
+aiming = 0
+ap_cost = 3.0
+muzzle_velocity = 18.0
+charge_levels = PackedFloat32Array(0.7, 1)
+charge_ap_extra = 1.0
+min_power = 0.25
+pitch_min_deg = -5.0
+pitch_max_deg = 35.0
+default_pitch_deg = 8.0
+traverse_deg = 10.0
+charge_time = 1.0
+shell_radius = 0.09
+rounds = Array[ExtResource("2_rscript")]([ExtResource("3_r")])
+aim_error_deg = 0.8
+min_range = 1.5
+max_range = 12.0
+high_arc = false
+penetration = 12.0
+blast_radius = 1.2
+blast_damage = 4.0
+blast_impulse = 6.0
+blast_lift = 0.3

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="RoundStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="1_round"]
+
+[resource]
+script = ExtResource("1_round")
+display_name = "Meteor"
+short_name = "MET"
+description = "A falling rock: bursts on impact, then bounces on across the ground. Every landing is a small blast and leaves burning tiles."
+color = Color(0.95, 0.3, 0.2, 1)
+special = 3
+projectile = "meteor"
+weight = 1.3
+damage_mult = 0.8
+radius_mult = 0.9
+penetration_mult = 0.8
+impulse_mult = 0.8
+direct_hit_mult = 1.2
+fire_factor = 0.7
+sub_damage = 3.0
+sub_radius = 1.1
+bounces = 3
+restitution = 0.55

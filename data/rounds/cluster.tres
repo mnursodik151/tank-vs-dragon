@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="RoundStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="1_round"]
+
+[resource]
+script = ExtResource("1_round")
+display_name = "Cluster"
+short_name = "CLU"
+description = "Bursts into bomblets scattered around the impact. Weak against armor."
+color = Color(0.7, 1, 0.45, 1)
+special = 2
+weight = 1.2
+damage_mult = 0.3
+radius_mult = 0.7
+penetration_mult = 0.35
+impulse_mult = 0.4
+direct_hit_mult = 1.0
+submunitions = 5
+spread = 2.8
+sub_damage = 2.0
+sub_radius = 0.9

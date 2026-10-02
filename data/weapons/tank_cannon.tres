@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="WeaponStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/weapon_stats.gd" id="1_weapon"]
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="2_rscript"]
+[ext_resource type="Resource" path="res://data/rounds/normal.tres" id="3_r1"]
+[ext_resource type="Resource" path="res://data/rounds/ap.tres" id="4_r2"]
+[ext_resource type="Resource" path="res://data/rounds/incendiary.tres" id="5_r3"]
+[ext_resource type="Resource" path="res://data/rounds/cluster.tres" id="6_r4"]
+
+[resource]
+script = ExtResource("1_weapon")
+display_name = "Cannon"
+glyph = "cannon"
+aiming = 0
+ap_cost = 4.0
+muzzle_velocity = 26.0
+charge_levels = PackedFloat32Array(0.6, 0.8, 1)
+charge_ap_extra = 1.0
+min_power = 0.2
+pitch_min_deg = -5.0
+pitch_max_deg = 28.0
+default_pitch_deg = 7.0
+traverse_deg = 12.0
+charge_time = 1.4
+shell_radius = 0.12
+rounds = Array[ExtResource("2_rscript")]([ExtResource("3_r1"), ExtResource("4_r2"), ExtResource("5_r3"), ExtResource("6_r4")])
+aim_error_deg = 0.35
+min_range = 2.5
+max_range = 24.0
+high_arc = false
+penetration = 8.0
+blast_radius = 1.6
+blast_damage = 6.0
+blast_impulse = 10.0
+blast_lift = 0.3

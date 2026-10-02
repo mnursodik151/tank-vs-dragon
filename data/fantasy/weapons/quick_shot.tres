@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="WeaponStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/weapon_stats.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+tracer_color = Color(0.9, 0.8, 0.5, 1)
+display_name = "Quick Shot"
+model = ""
+glyph = "bow"
+aiming = 1
+ap_cost = 1.5
+muzzle_velocity = 55.0
+shell_radius = 0.05
+burst_rounds = 3
+round_interval = 0.12
+spread_deg = 0.8
+spread_growth_deg = 0.3
+min_range = 0.0
+max_range = 10.0
+penetration = 1.0
+blast_radius = 0.6
+blast_damage = 1.0
+blast_impulse = 1.0
+blast_lift = 0.1

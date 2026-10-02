@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="RoundStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="1_round"]
+
+[resource]
+script = ExtResource("1_round")
+display_name = "Arrow"
+short_name = "ARW"
+description = "A war arrow with an alchemist's charge: pierces armor and bursts on impact."
+color = Color(0.9, 0.8, 0.5, 1)
+special = 0
+projectile = "arrow"
+weight = 1.0
+damage_mult = 1.0
+radius_mult = 1.0
+penetration_mult = 1.0
+impulse_mult = 1.0
+direct_hit_mult = 1.0

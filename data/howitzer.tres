@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Script" path="res://scripts/units/weapon_stats.gd" id="2_wscript"]
+[ext_resource type="Resource" path="res://data/weapons/howitzer.tres" id="3_main"]
+
+[resource]
+script = ExtResource("1_stats")
+model = "howitzer"
+display_name = "Howitzer"
+kind = 1
+max_hp = 14
+max_ap = 8.0
+move_ap_per_weight = 2.0
+move_speed = 2.5
+initiative = 4
+mass = 8.0
+radius = 0.6
+height = 0.9
+armor_front = 4.0
+armor_side = 3.0
+armor_rear = 2.0
+sight_range = 7.2
+weapons = Array[ExtResource("2_wscript")]([ExtResource("3_main")])

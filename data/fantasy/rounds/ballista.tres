@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="RoundStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/round_stats.gd" id="1_round"]
+
+[resource]
+script = ExtResource("1_round")
+display_name = "Ballista"
+short_name = "BAL"
+description = "A heavy iron bolt, lighter than a solid shot: punches through armor on a direct hit, tiny blast."
+color = Color(0.85, 0.8, 0.55, 1)
+special = 0
+projectile = "bolt"
+weight = 1.1
+damage_mult = 0.55
+radius_mult = 0.55
+penetration_mult = 2.2
+impulse_mult = 0.6
+direct_hit_mult = 2.4

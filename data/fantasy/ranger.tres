@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Script" path="res://scripts/units/weapon_stats.gd" id="2_wscript"]
+[ext_resource type="Resource" path="res://data/fantasy/weapons/longbow.tres" id="3_main"]
+[ext_resource type="Resource" path="res://data/fantasy/weapons/quick_shot.tres" id="4_aux"]
+
+[resource]
+script = ExtResource("1_stats")
+model = "ranger"
+display_name = "Ranger"
+kind = 0
+max_hp = 8
+max_ap = 6.0
+move_ap_per_weight = 0.5
+move_speed = 3.0
+initiative = 12
+mass = 0.8
+radius = 0.3
+height = 1.5
+sight_range = 12.8
+drone_range = 22.0
+spotter_kind = "eagle"
+spotter_radius = 4.5
+weapons = Array[ExtResource("2_wscript")]([ExtResource("3_main"), ExtResource("4_aux")])
