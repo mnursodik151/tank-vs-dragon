@@ -1,6 +1,6 @@
 class_name Factions
 extends RefCounted
-## The two factions the start menu offers. A faction is a roster of three unit types in the same slots, so the spawn table, turn order and
+## The two factions the start menu offers. A faction is a roster of three UnitBlueprints in the same slots, so the spawn table, turn order and
 ## AI never care which one a side fields:
 ##   slot 0 = the main battle unit  (modern: Tank    / fantasy: Mage with a staff)
 ##   slot 1 = the artillery piece   (modern: Howitzer / fantasy: Octo Cannon pushed by a knight)
@@ -16,16 +16,16 @@ const BLURBS := {
 	Id.FANTASY: "Mage, Octo Cannon, Ranger (eagle)",
 }
 const ROSTERS := {
-	Id.MODERN: ["res://data/tank.tres", "res://data/howitzer.tres", "res://data/infantry.tres"],
-	Id.FANTASY: ["res://data/fantasy/mage.tres", "res://data/fantasy/octo_cannon.tres", "res://data/fantasy/ranger.tres"],
+	Id.MODERN: ["res://data/blueprints/tank.tres", "res://data/blueprints/howitzer.tres", "res://data/blueprints/infantry.tres"],
+	Id.FANTASY: ["res://data/blueprints/mage.tres", "res://data/blueprints/octo_cannon.tres", "res://data/blueprints/ranger.tres"],
 }
 
 
-## The unit types of `faction`, slot order (see above).
-static func roster(faction: int) -> Array[UnitStats]:
-	var out: Array[UnitStats] = []
+## The unit blueprints of `faction`, slot order (see above).
+static func roster(faction: int) -> Array[UnitBlueprint]:
+	var out: Array[UnitBlueprint] = []
 	for path: String in ROSTERS[faction]:
-		out.append(load(path) as UnitStats)
+		out.append(load(path) as UnitBlueprint)
 	return out
 
 

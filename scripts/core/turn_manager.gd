@@ -66,6 +66,7 @@ func _run_turn(unit: Unit) -> void:
 		unit.ignite(Explosion.BURN_TURNS)   # standing in fire sets you alight
 	_ctx.intel.begin_turn(unit)              # distance readings are re-rolled for the new observer
 	unit.begin_turn()                        # burning units take damage here
+	_ctx.history.begin_turn(unit)            # a fresh undo history: nothing of an earlier turn can be taken back
 	turn_started.emit(unit)
 	if not unit.is_alive():
 		if verbose:
@@ -76,7 +77,9 @@ func _run_turn(unit: Unit) -> void:
 		push_error("No controller registered for team %d" % unit.team)
 		return
 
-	while unit.is_alive() and unit.ap > Action.AP_EPSILON:
+	# The turn runs while there is AP - or, for a controller that lets its player take actions back, while something is still
+	# undoable (the player then ends the turn explicitly).
+	while unit.is_alive() and (unit.ap > Action.AP_EPSILON or controller.holds_turn(unit, _ctx)):
 		_set_state(State.PLAN)
 		var action: Action = await controller.decide(unit, _ctx)
 		if action == null:
@@ -88,6 +91,8 @@ func _run_turn(unit: Unit) -> void:
 		_set_state(State.EXECUTE)
 		if verbose:
 			print("[R%d] %s" % [round_number, action.describe()])
+		if action.records_history():
+			_ctx.history.record(action, _ctx)   # snapshot of the battle just before the action, for undo / rewind
 		await action.execute(_ctx)
 		action_executed.emit(action)
 
@@ -97,6 +102,7 @@ func _run_turn(unit: Unit) -> void:
 			break
 
 	_set_state(State.END_TURN)
+	_ctx.history.end_turn()
 	_ctx.view.clear_highlight()
 	_ctx.guide.clear()
 	turn_ended.emit(unit)

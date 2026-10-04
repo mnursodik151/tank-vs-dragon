@@ -78,12 +78,17 @@ shot review traverse in the camera's orientation. Q/E and WASD still move the ca
 | Context | Keys |
 |---|---|
 | Always | `R` restart (new map), `G` grid, `V` shot cam, `L` line of sight, `P` enemy-turn pan, `H` shot review, `WASD` pan, `Q/E` rotate, wheel zoom |
-| Player turn | `1-9` / click tool, left click use, `Space`/`Enter` end turn |
+| Player turn | `1-9` / click tool, left click use, `Space`/`Enter` end turn, `Z` / `Backspace` undo last move (free), `X` rewind the turn (shots cost a rewind charge) |
+| Anywhere | `F1` how to play (start menu and battle) |
 | Gunnery panel | Up/Down elevation, Left/Right traverse, `T` / `Shift+T` round, `C` charge, hold `Space` power, release fire, `Esc` / right click cancel, drag dial / radar, wheel elevation |
 | Shot review | Up/Down / click select, `F` filter, wheel scroll, `H` / `Esc` close |
 
+## Rev 20 / 21 additions
+- Toolbar: an undo hint line (`[Z] Undo move   [X] Rewind turn (1 left)`, blue, above the AP readout) and a gentle fading popup above it ("press SPACE to end your turn" when only moving / ramming is left; red `flash` stays for refusals).
+- How to play (`HowToPlayScreen`): modal overlay with three pages and a numbered gunnery-panel miniature; start menu button / F1 / F1 in battle. See design-patterns.md section 6.
+
 ## UX gaps / ideas
-- Start menu, hot-seat cover and victory screen exist since Rev 16 (see implementation-notes Rev 16; `Control`-based, styled through `UiTheme.button/panel_style/label`). Still missing: pause, settings, tutorial, back-to-menu mid-battle (`R` restarts), no turn-order or unit-info panel, no tooltips beyond the toolbar flash messages.
+- Start menu, hot-seat cover and victory screen exist since Rev 16 (see implementation-notes Rev 16; `Control`-based, styled through `UiTheme.button/panel_style/label`). Still missing: pause, settings, an interactive tutorial (a static How to Play exists since Rev 21), back-to-menu mid-battle (`R` restarts), no turn-order or unit-info panel, no tooltips beyond the toolbar flash messages.
 - Layouts are hard-coded for ~1280x720 (the gunnery panel scales uniformly, the toolbar and HUD do not); no `Theme`, no localisation, fonts are the engine fallback font.
 - No controller / touch support; hotkeys 1-9 only; no key rebinding.
 - The player gets no feedback about enemy turns beyond the camera pan and the world (no "enemy is firing" banner, enemy shots only visible via the shot review / shot camera).

@@ -6,26 +6,35 @@ enum Kind { MOVE, WEAPON, RAM, DRONE }
 
 var kind: Kind = Kind.MOVE
 var weapon: WeaponStats
+var spec: ActionSpec        ## the action this slot performs (SHOOT: shared by every weapon slot)
 var label := ""
 var glyph := ""
 
 
-## The toolbar for `unit`: Move, every weapon (main gun first), Ram.
+## The toolbar for `unit`, in the order its blueprint lists the actions it can do (Move, one slot per weapon with the main gun
+## first, the spotter, Ram).
 static func build_for(unit: Unit) -> Array[ToolEntry]:
 	var out: Array[ToolEntry] = []
-	out.append(_make(Kind.MOVE, null, "Move", "move"))
-	for w in unit.stats.weapons:
-		out.append(_make(Kind.WEAPON, w, w.display_name, w.glyph))
-	if unit.stats.drone_range > 0.0:
-		out.append(_make(Kind.DRONE, null, unit.stats.spotter_name(), unit.stats.spotter_kind))
-	out.append(_make(Kind.RAM, null, "Ram", "ram"))
+	for a in unit.profile.actions:
+		match a.kind:
+			ActionSpec.Kind.MOVE:
+				out.append(_make(Kind.MOVE, null, a, a.display_label(), a.display_glyph()))
+			ActionSpec.Kind.SHOOT:
+				for w in unit.stats.weapons:
+					out.append(_make(Kind.WEAPON, w, a, w.display_name, w.glyph))
+			ActionSpec.Kind.SPOTTER:
+				var sp := a as SpotterSpec
+				out.append(_make(Kind.DRONE, null, a, sp.spotter_name(), sp.spotter_kind))
+			ActionSpec.Kind.RAM:
+				out.append(_make(Kind.RAM, null, a, a.display_label(), a.display_glyph()))
 	return out
 
 
-static func _make(p_kind: Kind, p_weapon: WeaponStats, p_label: String, p_glyph: String) -> ToolEntry:
+static func _make(p_kind: Kind, p_weapon: WeaponStats, p_spec: ActionSpec, p_label: String, p_glyph: String) -> ToolEntry:
 	var e := ToolEntry.new()
 	e.kind = p_kind
 	e.weapon = p_weapon
+	e.spec = p_spec
 	e.label = p_label
 	e.glyph = p_glyph
 	return e
@@ -37,5 +46,5 @@ func cost() -> float:
 		Kind.WEAPON:
 			return weapon.ap_cost
 		Kind.DRONE:
-			return DroneAction.AP_COST
+			return (spec as SpotterSpec).ap_cost
 	return 0.0

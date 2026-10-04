@@ -10,7 +10,7 @@ Godot Project Manager -> Import -> select `project.godot` -> F5. The game opens 
 2 players (hot seat, a cover screen hides the board between turns), which side you take (north / south) and the tint of each side.
 A victory screen (stats, rematch, main menu) closes every battle.
 
-Controls: `1`-`9` (or click a toolbar slot) pick a tool, left click uses it, `Space` ends the turn, `G` toggles the
+Controls: `1`-`9` (or click a toolbar slot) pick a tool, left click uses it, `Space` ends the turn, `Z` / `Backspace` undoes your last move (free, no limits), `X` rewinds the whole turn (free if you only moved; a shot, ram or spotter in it costs a rewind charge), `F1` opens the how-to-play pages (also on the start menu), `G` toggles the
 hex grid, `V` toggles the shot camera, `P` toggles the camera pan to enemy turns (your own turn always pans), `R` restarts (same setup, new map), `WASD` pan, `Q/E` rotate camera, mouse wheel zoom.
 
 ## How a turn plays

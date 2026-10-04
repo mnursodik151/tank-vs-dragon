@@ -35,6 +35,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key != null and key.pressed and not key.echo and (key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER):
 		_start()
+	elif key != null and key.pressed and not key.echo and key.keycode == KEY_F1:
+		_show_how_to_play()
 
 
 func _build() -> void:
@@ -119,6 +121,10 @@ func _build() -> void:
 	var extras := HBoxContainer.new()
 	extras.add_theme_constant_override("separation", 8)
 	col.add_child(extras)
+	var how_to := UiTheme.button("HOW TO PLAY", SLATE, UiTheme.SMALL)
+	how_to.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	how_to.pressed.connect(_show_how_to_play)
+	extras.add_child(how_to)
 	var credits := UiTheme.button("CREDITS", SLATE, UiTheme.SMALL)
 	credits.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	credits.pressed.connect(_show_credits)
@@ -128,7 +134,7 @@ func _build() -> void:
 		quit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		quit.pressed.connect(func() -> void: get_tree().quit())
 		extras.add_child(quit)
-	col.add_child(UiTheme.label("[Enter] start", Color(0.6, 0.65, 0.75), UiTheme.SMALL, HORIZONTAL_ALIGNMENT_CENTER))
+	col.add_child(UiTheme.label("[Enter] start    [F1] how to play", Color(0.6, 0.65, 0.75), UiTheme.SMALL, HORIZONTAL_ALIGNMENT_CENTER))
 
 
 func _gap(h: float) -> Control:
@@ -210,6 +216,10 @@ func _style_swatch(s: Button, c: Color, selected: bool, taken: bool) -> void:
 		sb.set_border_width_all(4 if selected else 2)
 		sb.border_color = Color.WHITE if selected else Color(0.10, 0.11, 0.15)
 		s.add_theme_stylebox_override(state, sb)
+
+
+func _show_how_to_play() -> void:
+	add_child(HowToPlayScreen.new())
 
 
 func _show_credits() -> void:

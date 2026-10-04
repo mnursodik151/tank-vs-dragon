@@ -3,6 +3,10 @@
 Snapshot as of Rev 7. How a unit is represented, who decides what it does (controllers), and what it can do (actions). Related:
 [gamestate-and-scene-manager.md](gamestate-and-scene-manager.md) (turn loop that drives all this), [ui-ux.md](ui-ux.md) (toolbar/panel the player controller uses), [implementation-notes.md](implementation-notes.md).
 
+> **Rev 20**: units are built from a `UnitBlueprint` through a `UnitProfile` (upgradable clones of the stats; `unit.stats` is the effective stats, `unit.profile` the orchestrator), the action list comes from
+> the blueprint (`ToolEntry.build_for`, `unit.can_do(kind)`), `DashAction` / `DroneAction` read `RamSpec` / `SpotterSpec` (the constants and `drone_range` / `spotter_*` below are now those specs), `Unit.BURN_DAMAGE`
+> & co. are `UnitStats` fields, and every action goes through `CommandHistory` (`Action.reversibility()`; take-backs are `UndoMoveAction` (free, Z) and `RewindAction` (limited, X)). Details: [design-patterns.md](design-patterns.md).
+
 ## The pattern
 **Strategy + Command.** `TurnManager` asks the team's `UnitController.decide(unit, ctx)` (awaitable) for an `Action`; it validates with `can_execute`, then
 `await action.execute(ctx)`, then waits for physics to settle. `null` from `decide` = end the unit's turn. Actions never touch the scene tree except through
@@ -95,7 +99,7 @@ within `blast_radius + target radius`, optional wind compensation (`wind_awarene
 
 ## Gaps / ideas
 - Movement is not interruptible and does not trigger anything en route (fire, mines, overwatch). Ending a move inside a fire cell only hurts at the next turn start.
-- No undo / confirm step; right click does nothing outside the gunnery panel.
+- Undo exists since Rev 20 (Z / X, moves free, shots with rewind charges); there is still no confirm step, and right click does nothing outside the gunnery panel.
 - AI: no focus on weak targets, no use of cover/line of sight, no drone use, single-turn thinking, `Ram` only when adjacent and nothing else is possible, ties in "nearest" are arbitrary.
 - `ToolEntry.cost()` shows the base AP of a weapon; the true cost depends on the chosen charge (shown only in the gunnery panel).
 - Only the active team-0 player controls units; hotseat / second human would need a controller per team with its own UI context.

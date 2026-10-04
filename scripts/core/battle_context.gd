@@ -19,8 +19,21 @@ var verbose := false
 ## Whose eyes the screen looks through: enemy units outside this team's line of sight are hidden (model, label, radar
 ## blip, camera pans). -1 = see everything (AI vs AI).
 var viewer_team := 0
+var history := CommandHistory.new()   ## the current turn's executed actions, for undo / rewind (see CommandHistory)
+var _rules: Dictionary = {}           # team -> BattleRules
 ## Set when the battle is over: the screen shows every unit (the AI's own sight rules are unaffected).
 var reveal_all := false
+
+
+## The undo rules of `team` (authored defaults until `set_rules` gives it others).
+func rules_for(team: int) -> BattleRules:
+	if not _rules.has(team):
+		_rules[team] = BattleRules.new()
+	return _rules[team]
+
+
+func set_rules(team: int, rules: BattleRules) -> void:
+	_rules[team] = rules
 
 
 func alive_units() -> Array[Unit]:

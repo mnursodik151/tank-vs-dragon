@@ -802,8 +802,8 @@ const HIT_BOX := Rect2(796.0, 252.0, 192.0, 88.0)
 const SAME_COLOR := Color(0.5, 0.9, 0.6)
 const DIFF_COLOR := Color(1.0, 0.8, 0.35)
 const DIM_TEXT := Color(0.6, 0.63, 0.7)
-const FRONT_ARC := deg_to_rad(Unit.FRONT_ARC_DEG)
-const REAR_ARC := deg_to_rad(180.0 - Unit.REAR_ARC_DEG)
+const FRONT_ARC := deg_to_rad(50.0)           # drawing of the hull sides (the UnitStats.front_arc_deg / rear_arc_deg defaults)
+const REAR_ARC := deg_to_rad(180.0 - 130.0)
 
 
 ## Degrees, -180..180, the same number the shot review prints as "yaw".

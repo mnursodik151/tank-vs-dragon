@@ -19,5 +19,6 @@ direct_hit_mult = 1.2
 fire_factor = 0.7
 sub_damage = 3.0
 sub_radius = 1.1
+sub_impulse = 5.0
 bounces = 3
 restitution = 0.55

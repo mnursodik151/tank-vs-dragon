@@ -125,11 +125,14 @@ func _run() -> void:
 	check(FireParams.make(cannon, 0.0, 0.2, 1.0, 9, normal).charge == 3, "charge clamps to the weapon's maximum")
 
 	# ---------- armor model on a standalone unit ----------
-	var tank_stats: UnitStats = load("res://data/tank.tres")
-	var inf_stats: UnitStats = load("res://data/infantry.tres")
-	var how_stats: UnitStats = load("res://data/howitzer.tres")
+	var tank_bp: UnitBlueprint = load("res://data/blueprints/tank.tres")
+	var inf_bp: UnitBlueprint = load("res://data/blueprints/infantry.tres")
+	var how_bp: UnitBlueprint = load("res://data/blueprints/howitzer.tres")
+	var tank_stats: UnitStats = tank_bp.stats
+	var inf_stats: UnitStats = inf_bp.stats
+	var how_stats: UnitStats = how_bp.stats
 	var probe := Unit.new()
-	probe.configure(tank_stats, 0, Color.WHITE)
+	probe.configure(tank_bp, 0, Color.WHITE)
 	root.add_child(probe)
 	probe.face(Vector3(0, 0, 1))
 	check(probe.armor_sector(Vector3(0, 0, 1)) == HitResult.Sector.FRONT, "hit from ahead = front plate")
@@ -143,7 +146,7 @@ func _run() -> void:
 	var side := probe.take_hit(6.0, 8.0, Vector3(1, 0, 0))
 	check(side.outcome == HitResult.Outcome.PENETRATED, "pen 8 vs weaker side plate (7) penetrates")
 	var tough := Unit.new()
-	tough.configure(tank_stats, 0, Color.WHITE)
+	tough.configure(tank_bp, 0, Color.WHITE)
 	root.add_child(tough)
 	tough.face(Vector3(0, 0, 1))
 	var first := tough.take_hit(1.0, 1.5, Vector3(0, 0, 1))
@@ -152,12 +155,12 @@ func _run() -> void:
 		last = tough.take_hit(1.0, 1.5, Vector3(0, 0, 1))
 	check(last.damage > first.damage and tough.armor[0] < 12.0, "armor depletes under sustained fire (%.2f -> %.2f dmg per hit)" % [first.damage, last.damage])
 	var burn := Unit.new()
-	burn.configure(tank_stats, 0, Color.WHITE)
+	burn.configure(tank_bp, 0, Color.WHITE)
 	root.add_child(burn)
 	burn.face(Vector3(0, 0, 1))
 	check(burn.take_hit(6.0, 8.0, Vector3(0, 0, 1)).outcome == HitResult.Outcome.ABSORBED, "cold armor stops a pen-8 hit on the front")
 	var burn2 := Unit.new()
-	burn2.configure(tank_stats, 0, Color.WHITE)
+	burn2.configure(tank_bp, 0, Color.WHITE)
 	root.add_child(burn2)
 	burn2.face(Vector3(0, 0, 1))
 	burn2.ignite(2)
@@ -166,7 +169,7 @@ func _run() -> void:
 	burn2.begin_turn()
 	check(burn2.hp < hp_before and burn2.burning == 1, "burning costs HP each turn (%.1f -> %.1f)" % [hp_before, burn2.hp])
 	var grunt := Unit.new()
-	grunt.configure(inf_stats, 0, Color.WHITE)
+	grunt.configure(inf_bp, 0, Color.WHITE)
 	root.add_child(grunt)
 	check(grunt.take_hit(3.0, 1.0, Vector3(0, 0, 1)).outcome == HitResult.Outcome.UNARMORED, "infantry have no armor")
 
@@ -290,9 +293,9 @@ func _run() -> void:
 	check(Intel.fidelity_for(Vector3(10.5, 0, 0), Vector3.ZERO, 10.0, 0.0) == 0.0, "spotted areas and drones have no outer ring")
 	var ring_ctx := BattleContext.new()   # no board: nothing blocks sight, only the rings count
 	var ring_obs := Unit.new()
-	ring_obs.configure(tank_stats, 1, Color.WHITE)
+	ring_obs.configure(tank_bp, 1, Color.WHITE)
 	var ring_tgt := Unit.new()
-	ring_tgt.configure(tank_stats, 0, Color.WHITE)
+	ring_tgt.configure(tank_bp, 0, Color.WHITE)
 	main.add_child(ring_obs)
 	main.add_child(ring_tgt)
 	ring_ctx.units = [ring_obs, ring_tgt] as Array[Unit]
@@ -368,17 +371,17 @@ func _run() -> void:
 	ctx.board.resync(ctx.units)
 	scout.begin_turn()
 	var scout_ap := scout.ap
-	var drone_far := DroneAction.new(scout, scout.global_position + Vector3(scout.stats.drone_range + 5.0, 0.0, 0.0))
+	var drone_far := DroneAction.new(scout, scout.global_position + Vector3(scout.spotter_spec().reach + 5.0, 0.0, 0.0))
 	check(not drone_far.can_execute(ctx), "drone out of range rejected")
 	var drone_pt := Vector3(far_foe.global_position.x, 0.0, far_foe.global_position.z)
 	var drone_ok := DroneAction.new(scout, scout.global_position.lerp(drone_pt, 0.8))
 	check(drone_ok.in_range() and drone_ok.can_execute(ctx), "drone in range accepted")
 	await drone_ok.execute(ctx)
-	check(is_equal_approx(scout_ap - scout.ap, DroneAction.AP_COST) and ctx.intel.areas.size() == 1, "drone costs AP and opens a spotted area")
+	check(is_equal_approx(scout_ap - scout.ap, scout.spotter_spec().ap_cost) and ctx.intel.areas.size() == 1, "drone costs AP and opens a spotted area")
 	var drone_node: Variant = ctx.intel.areas[0]["node"]
 	check(drone_node is Drone and is_instance_valid(drone_node) and (drone_node as Drone).is_inside_tree(), "drone leaves a physical marker on station")
-	check(scout.drone_cooldown == DroneAction.COOLDOWN_TURNS and not DroneAction.new(scout, drone_pt).can_execute(ctx), "drone on cooldown cannot launch again")
-	check(ctx.intel.areas[0]["expires"] - ctx.round_number == Intel.DRONE_ROUNDS - 1, "drone stays for %d turns" % Intel.DRONE_ROUNDS)
+	check(scout.drone_cooldown == scout.spotter_spec().cooldown_turns and not DroneAction.new(scout, drone_pt).can_execute(ctx), "drone on cooldown cannot launch again")
+	check(ctx.intel.areas[0]["expires"] - ctx.round_number == scout.spotter_spec().duration_rounds - 1, "drone stays for %d turns" % scout.spotter_spec().duration_rounds)
 	check(main._sight.refresh() == ctx.intel.sources(0, ctx.units).size() and main._sight.visible, "LoS overlay is fed the team's sight sources")
 	var is_drone := func(s: Dictionary) -> bool: return s["label"] == "drone"
 	check(ctx.intel.sources(0, ctx.units).filter(is_drone).size() == 1 and ctx.intel.sources(1, ctx.units).filter(is_drone).is_empty(), "drone sight belongs to its own team only")
@@ -386,9 +389,9 @@ func _run() -> void:
 	await create_timer(1.2).timeout
 	check(not is_instance_valid(drone_node), "drone flies off when its time is up")
 	ctx.intel.tick(ctx.round_number)
-	for k in DroneAction.COOLDOWN_TURNS:
+	for k in scout.spotter_spec().cooldown_turns:
 		scout.begin_turn()
-	check(scout.drone_cooldown == 0 and DroneAction.new(scout, scout.global_position.lerp(drone_pt, 0.8)).can_execute(ctx), "drone available again after %d turns" % DroneAction.COOLDOWN_TURNS)
+	check(scout.drone_cooldown == 0 and DroneAction.new(scout, scout.global_position.lerp(drone_pt, 0.8)).can_execute(ctx), "drone available again after %d turns" % scout.spotter_spec().cooldown_turns)
 
 	# ---------- props: trees, rocks, groves + line-of-sight occlusion ----------
 	var kinds := {}
@@ -646,7 +649,7 @@ func _run() -> void:
 
 	# not enough AP
 	var low_ap := Unit.new()
-	low_ap.configure(tank_stats, 0, Color.WHITE)
+	low_ap.configure(tank_bp, 0, Color.WHITE)
 	ctx.root.add_child(low_ap)
 	low_ap.ap = 5.0
 	check(not ShootAction.new(low_ap, fp3).can_execute(ctx), "3-charge shot rejected with only 5 AP")
@@ -658,7 +661,7 @@ func _run() -> void:
 		if u != how:
 			u.die()
 	var victim := Unit.new()
-	victim.configure(inf_stats, 1, Color.RED)
+	victim.configure(inf_bp, 1, Color.RED)
 	main.add_child(victim)
 	ctx.units.append(victim)
 	place(ctx, how, Vector2i(1, 2))
@@ -722,11 +725,11 @@ func _run() -> void:
 	# ---------- turn start: the camera glides to the acting unit, zoom kept ----------
 	var cam: TacticsCamera = ctx.camera
 	var own_actor := Unit.new()
-	own_actor.configure(inf_stats, 0, Color.WHITE)
+	own_actor.configure(inf_bp, 0, Color.WHITE)
 	main.add_child(own_actor)
 	own_actor.snap_to(ctx.board.cell_to_world(GridBoard.offset_to_axial(Vector2i(5, 8)), own_actor.rest_height()))
 	var foe_actor := Unit.new()
-	foe_actor.configure(inf_stats, 1, Color.WHITE)
+	foe_actor.configure(inf_bp, 1, Color.WHITE)
 	main.add_child(foe_actor)
 	foe_actor.snap_to(ctx.board.cell_to_world(GridBoard.offset_to_axial(Vector2i(27, 20)), foe_actor.rest_height()))   # far from every friendly unit
 	var settle := func() -> void:
@@ -767,7 +770,7 @@ func _run() -> void:
 	var rctx := BattleContext.new()
 	rctx.board = GridBoard.new(Vector2i(22, 18), 1.0)
 	rctx.root = main
-	var spawn := func(st: UnitStats, team: int, col: int, row: int) -> Unit:
+	var spawn := func(st: UnitBlueprint, team: int, col: int, row: int) -> Unit:
 		var u := Unit.new()
 		u.configure(st, team, Color.WHITE)
 		main.add_child(u)
@@ -777,7 +780,7 @@ func _run() -> void:
 		rctx.units.append(u)
 		u.begin_turn()
 		return u
-	var rammer: Unit = spawn.call(tank_stats, 0, 4, 12)
+	var rammer: Unit = spawn.call(tank_bp, 0, 4, 12)
 	var open_dash := DashAction.new(rammer, Vector3.RIGHT)
 	check(open_dash.can_execute(rctx) and not open_dash.has_impact(), "dash into open ground hits nothing")
 	check(is_equal_approx(open_dash.cost(rctx), 8.0 - 0.0) or open_dash.cost(rctx) <= rammer.ap + 0.001, "dash never costs more than the AP on hand (%.1f)" % open_dash.cost(rctx))
@@ -805,7 +808,7 @@ func _run() -> void:
 	rammer.hp = float(rammer.stats.max_hp)
 	rammer.armor[0] = rammer.stats.armor_front
 	rammer.ap = rammer.stats.max_ap
-	var ram_mark: Unit = spawn.call(how_stats, 1, 12, 12)
+	var ram_mark: Unit = spawn.call(how_bp, 1, 12, 12)
 	var ram_hit := DashAction.new(rammer, ram_mark.global_position - rammer.global_position)
 	ram_hit.plan(rctx)
 	check(ram_hit.hit_unit == ram_mark and ram_hit.has_impact(), "dash toward a unit ends against it")
@@ -818,9 +821,9 @@ func _run() -> void:
 		await physics_frame
 	check(ram_mark.global_position.x > mark_x + 0.3, "armor difference knocks the howitzer back (%.1f m)" % (ram_mark.global_position.x - mark_x))
 	ram_mark.freeze_in_place()
-	var rookie: Unit = spawn.call(inf_stats, 0, 4, 14)
+	var rookie: Unit = spawn.call(inf_bp, 0, 4, 14)
 	var ram_weak := DashAction.new(rookie, Vector3.RIGHT)
-	var weak_foe: Unit = spawn.call(how_stats, 1, 8, 14)
+	var weak_foe: Unit = spawn.call(how_bp, 1, 8, 14)
 	var weak_hit := DashAction.new(rookie, weak_foe.global_position - rookie.global_position)
 	weak_hit.plan(rctx)
 	check(weak_hit.hit_unit == weak_foe and weak_hit.exchange().x == 0.0 and weak_hit.exchange().y > 0.0, "unarmored infantry ram deals nothing and takes damage")
@@ -861,7 +864,7 @@ func _run() -> void:
 	var ectx := BattleContext.new()
 	ectx.board = eb
 	ectx.root = main
-	var spawn_on := func(st: UnitStats, team: int, col: int, row: int) -> Unit:
+	var spawn_on := func(st: UnitBlueprint, team: int, col: int, row: int) -> Unit:
 		var u := Unit.new()
 		u.configure(st, team, Color.WHITE)
 		main.add_child(u)
@@ -871,7 +874,7 @@ func _run() -> void:
 		ectx.units.append(u)
 		u.begin_turn()
 		return u
-	var ev_climber: Unit = spawn_on.call(tank_stats, 0, 7, 5)
+	var ev_climber: Unit = spawn_on.call(tank_bp, 0, 7, 5)
 	ev_climber.ap = 30.0
 	var el_start_y := ev_climber.global_position.y
 	var ev_crossing := MoveAction.new(ev_climber, eb.cell_to_world(GridBoard.offset_to_axial(Vector2i(9, 5))))
@@ -883,12 +886,12 @@ func _run() -> void:
 	await ev_crossing.execute(ectx)
 	check(is_equal_approx(ap_el - ev_climber.ap, ev_crossing.cost(ectx)) and is_equal_approx(hp_el, ev_climber.hp), "crossing deducts the priced AP and no hit points (-%.1f AP)" % (ap_el - ev_climber.ap))
 	check(absf(ev_climber.global_position.y - el_start_y) < 0.02, "unit ends on the ground at its destination height")
-	var ev_on_wall: Unit = spawn_on.call(tank_stats, 0, 8, 12)
+	var ev_on_wall: Unit = spawn_on.call(tank_bp, 0, 8, 12)
 	check(absf(ev_on_wall.global_position.y - (ev_on_wall.rest_height() + 1.0)) < 0.01, "a unit on a level-2 cell stands 1 m up")
-	var ev_seen_from: Unit = spawn_on.call(tank_stats, 0, 6, 13)
-	var ev_far_side: Unit = spawn_on.call(tank_stats, 1, 10, 13)
+	var ev_seen_from: Unit = spawn_on.call(tank_bp, 0, 6, 13)
+	var ev_far_side: Unit = spawn_on.call(tank_bp, 1, 10, 13)
 	check(eb.los_blocked(ev_seen_from.global_position, ev_far_side.global_position), "a cliff wall taller than the eye blocks line of sight")
-	check(not eb.los_blocked(ev_on_wall.global_position, spawn_on.call(tank_stats, 1, 10, 12).global_position), "...but a unit standing on the wall sees over it")
+	check(not eb.los_blocked(ev_on_wall.global_position, spawn_on.call(tank_bp, 1, 10, 12).global_position), "...but a unit standing on the wall sees over it")
 	ectx.intel.board = eb
 	check(not Intel.in_los(ectx.intel.fidelity_at(0, [ev_seen_from] as Array[Unit], ev_far_side.global_position)), "intel: a target behind the cliff is out of line of sight")
 	for u in [ev_climber, ev_on_wall, ev_seen_from, ev_far_side]:
@@ -931,8 +934,8 @@ func _run() -> void:
 	ev_shell_w.blast_impulse = 0.0
 	ev_shell_w.penetration = 1.0
 	var ev_blast_at := GridBoard.offset_to_axial(Vector2i(7, 9))
-	var ev_behind: Unit = spawn_on.call(inf_stats, 1, 10, 9)
-	var ev_open: Unit = spawn_on.call(inf_stats, 1, 4, 9)
+	var ev_behind: Unit = spawn_on.call(inf_bp, 1, 10, 9)
+	var ev_open: Unit = spawn_on.call(inf_bp, 1, 4, 9)
 	ev_behind.hp = 100.0
 	ev_open.hp = 100.0
 	var rock_hp0 := eb.prop_hp(ev_rock_cell)
@@ -951,8 +954,8 @@ func _run() -> void:
 	ev_behind.die()
 	ev_open.die()
 
-	var ev_hill_target: Unit = spawn_on.call(inf_stats, 1, 15, 1)
-	var ev_hill_open: Unit = spawn_on.call(inf_stats, 1, 7, 1)
+	var ev_hill_target: Unit = spawn_on.call(inf_bp, 1, 15, 1)
+	var ev_hill_open: Unit = spawn_on.call(inf_bp, 1, 7, 1)
 	ev_hill_target.hp = 100.0
 	ev_hill_open.hp = 100.0
 	var ev_hill_blast := GridBoard.offset_to_axial(Vector2i(11, 1))
@@ -963,7 +966,7 @@ func _run() -> void:
 	ev_hill_open.die()
 
 	# ramming a prop wrecks it
-	var ev_rammer2: Unit = spawn_on.call(tank_stats, 0, 4, 16)
+	var ev_rammer2: Unit = spawn_on.call(tank_bp, 0, 4, 16)
 	var wreck_cell := GridBoard.offset_to_axial(Vector2i(8, 16))
 	eb.add_prop(wreck_cell, Props.Kind.TREE)
 	var wreck_dash := DashAction.new(ev_rammer2, Vector3.RIGHT)
@@ -1021,7 +1024,7 @@ func _run() -> void:
 		gctx.board = board
 		gctx.root = main
 		var gu := Unit.new()
-		gu.configure(tank_stats, 0, Color.WHITE)
+		gu.configure(tank_bp, 0, Color.WHITE)
 		main.add_child(gu)
 		var gc := Vector2i(5, 5)
 		gu.snap_to(board.cell_to_world(gc, gu.rest_height()))
@@ -1078,9 +1081,10 @@ func _run() -> void:
 	for st: UnitStats in [tank_stats, how_stats, inf_stats]:
 		rig_ok = rig_ok and UnitModel.has_model(st.model)
 	check(rig_ok, "tank, howitzer and infantry name an existing glTF model (%s / %s / %s)" % [tank_stats.model, how_stats.model, inf_stats.model])
-	for st: UnitStats in [tank_stats, how_stats]:
+	for bp: UnitBlueprint in [tank_bp, how_bp]:
+		var st := bp.stats
 		var mu := Unit.new()
-		mu.configure(st, 0, Color.WHITE)
+		mu.configure(bp, 0, Color.WHITE)
 		main.add_child(mu)
 		mu.snap_to(Vector3(2.0, mu.rest_height(), 2.0))
 		var m_hull: Node3D = mu._hull
@@ -1098,7 +1102,7 @@ func _run() -> void:
 		mu.die()
 		mu.free()
 	var soldier := Unit.new()
-	soldier.configure(inf_stats, 0, Color.WHITE)
+	soldier.configure(inf_bp, 0, Color.WHITE)
 	main.add_child(soldier)
 	var rpg_w: WeaponStats = inf_stats.weapons[0]
 	var rifle_w: WeaponStats = inf_stats.weapons[1]
@@ -1211,7 +1215,7 @@ func _run() -> void:
 
 	# ---------- knocked off the board ----------
 	var inf := Unit.new()
-	inf.configure(inf_stats, 0, Color.WHITE)
+	inf.configure(inf_bp, 0, Color.WHITE)
 	main.add_child(inf)
 	ctx.units.append(inf)
 	inf.snap_to(ctx.board.cell_to_world(GridBoard.offset_to_axial(Vector2i(27, 7)), inf.rest_height()))
@@ -1233,7 +1237,7 @@ func _run() -> void:
 	check(found_shore, "the live map has a river bank to test on")
 	if found_shore:
 		var wader := Unit.new()
-		wader.configure(tank_stats, 0, Color.WHITE)
+		wader.configure(tank_bp, 0, Color.WHITE)
 		main.add_child(wader)
 		ctx.units.append(wader)
 		wader.snap_to(ctx.board.cell_to_world(land, wader.rest_height()))

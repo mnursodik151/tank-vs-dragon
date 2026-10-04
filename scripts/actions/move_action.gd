@@ -45,7 +45,7 @@ func cost(ctx: BattleContext) -> float:
 
 func can_execute(ctx: BattleContext) -> bool:
 	plan(ctx)
-	return super(ctx) and destination != actor.cell and not _path.is_empty()
+	return super(ctx) and actor.can_do(ActionSpec.Kind.MOVE) and destination != actor.cell and not _path.is_empty()
 
 
 ## World-space waypoints (smoothed) the unit will follow, excluding its current position.
@@ -86,6 +86,10 @@ func execute(ctx: BattleContext) -> void:
 	actor.spend_ap(cost(ctx))
 	ctx.board.place(actor, ctx.board.world_to_cell(end))  # logical position updates immediately
 	await actor.walk(waypoints)
+
+
+func reversibility() -> Reversibility:
+	return Reversibility.FREE
 
 
 func describe() -> String:

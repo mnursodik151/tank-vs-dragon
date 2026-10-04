@@ -1,5 +1,5 @@
 class_name WeaponStats
-extends Resource
+extends Tunable
 ## Data-only weapon definition. One .tres per weapon in res://data/weapons/.
 ## A unit carries several (main gun first, auxiliary weapons after) and the toolbar lists them.
 
@@ -41,6 +41,29 @@ enum Aiming { GUNNERY, BURST }
 @export var blast_damage: float = 6.0          ## damage at the centre, linear falloff to the edge
 @export var blast_impulse: float = 10.0        ## launch impulse at the centre (see Explosion.MASS_EXPONENT)
 @export var blast_lift: float = 0.4            ## upward share of the knockback direction
+
+
+func scope() -> StringName:
+	return &"weapon"
+
+
+func implicit_tags() -> PackedStringArray:
+	return PackedStringArray(["burst" if aiming == Aiming.BURST else "gunnery"])
+
+
+func clone() -> Tunable:
+	var c := super() as WeaponStats
+	var own: Array[RoundStats] = []
+	for r in rounds:
+		own.append(r.clone() as RoundStats)
+	c.rounds = own
+	return c
+
+
+func reset_to_origin() -> void:
+	super()
+	for r in rounds:
+		r.reset_to_origin()
 
 
 func max_charges() -> int:

@@ -48,8 +48,10 @@ func start(at: Vector3, velocity: Vector3, ammo: RoundStats) -> void:
 	bounces_left = ammo.bounces
 	var mat := PhysicsMaterial.new()
 	mat.bounce = clampf(ammo.restitution, 0.0, 1.0)
-	mat.friction = 0.6
+	mat.friction = ammo.friction
 	physics_material_override = mat
+	mass = ammo.body_mass
+	linear_damp = ammo.body_damp
 	global_position = at
 	linear_velocity = velocity
 	_previous = velocity

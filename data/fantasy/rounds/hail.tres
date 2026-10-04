@@ -20,4 +20,6 @@ submunitions = 7
 spread = 3.4
 sub_damage = 1.6
 sub_radius = 0.8
+sub_impulse = 1.5
+sub_penetration_mult = 0.3
 fuse_distance = 4.5

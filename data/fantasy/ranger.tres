@@ -19,7 +19,4 @@ mass = 0.8
 radius = 0.3
 height = 1.5
 sight_range = 12.8
-drone_range = 22.0
-spotter_kind = "eagle"
-spotter_radius = 4.5
 weapons = Array[ExtResource("2_wscript")]([ExtResource("3_main"), ExtResource("4_aux")])

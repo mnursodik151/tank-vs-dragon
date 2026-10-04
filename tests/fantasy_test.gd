@@ -45,27 +45,30 @@ func find_round(weapon: WeaponStats, short: String) -> RoundStats:
 
 func _run() -> void:
 	# ---------- factions + config (no scene needed) ----------
-	check(Factions.roster(Factions.Id.MODERN).map(func(s: UnitStats) -> String: return s.display_name) == ["Tank", "Howitzer", "Infantry"], "modern roster = Tank, Howitzer, Infantry")
+	check(Factions.roster(Factions.Id.MODERN).map(func(s: UnitBlueprint) -> String: return s.display_name()) == ["Tank", "Howitzer", "Infantry"], "modern roster = Tank, Howitzer, Infantry")
 	var fr := Factions.roster(Factions.Id.FANTASY)
-	check(fr.map(func(s: UnitStats) -> String: return s.display_name) == ["Mage", "Octo Cannon", "Ranger"], "fantasy roster = Mage, Octo Cannon, Ranger")
+	check(fr.map(func(s: UnitBlueprint) -> String: return s.display_name()) == ["Mage", "Octo Cannon", "Ranger"], "fantasy roster = Mage, Octo Cannon, Ranger")
 	check(Factions.parse("Fantasy") == Factions.Id.FANTASY and Factions.parse("modern") == Factions.Id.MODERN and Factions.parse("x") == -1, "faction names parse from user args")
 	var modern := Factions.roster(Factions.Id.MODERN)
 	var same := true
 	for i in 3:
-		var a := fr[i]
-		var b := modern[i]
+		var a := fr[i].stats
+		var b := modern[i].stats
 		same = same and a.max_hp == b.max_hp and a.max_ap == b.max_ap and a.initiative == b.initiative and a.armor_front == b.armor_front \
 			and a.armor_side == b.armor_side and a.armor_rear == b.armor_rear and a.sight_range == b.sight_range and a.kind == b.kind \
-			and a.weapons.size() == b.weapons.size() and a.drone_range == b.drone_range
+			and a.weapons.size() == b.weapons.size()
+		var sa := fr[i].spec(ActionSpec.Kind.SPOTTER) as SpotterSpec
+		var sb := modern[i].spec(ActionSpec.Kind.SPOTTER) as SpotterSpec
+		same = same and (sa == null) == (sb == null) and (sa == null or sa.reach == sb.reach)
 	check(same, "every fantasy unit has the numbers of its modern counterpart (fair mixed battles)")
-	var all_models := fr.all(func(s: UnitStats) -> bool: return UnitModel.has_model(s.model))
-	check(all_models, "mage, octo cannon and ranger name existing models (%s / %s / %s)" % [fr[0].model, fr[1].model, fr[2].model])
+	var all_models := fr.all(func(s: UnitBlueprint) -> bool: return UnitModel.has_model(s.stats.model))
+	check(all_models, "mage, octo cannon and ranger name existing models (%s / %s / %s)" % [fr[0].stats.model, fr[1].stats.model, fr[2].stats.model])
 
-	var staff := fr[0].weapons[0]
-	var octo_w := fr[1].weapons[0]
-	var bolts := fr[0].weapons[1]
-	var longbow := fr[2].weapons[0]
-	var quick := fr[2].weapons[1]
+	var staff := fr[0].stats.weapons[0]
+	var octo_w := fr[1].stats.weapons[0]
+	var bolts := fr[0].stats.weapons[1]
+	var longbow := fr[2].stats.weapons[0]
+	var quick := fr[2].stats.weapons[1]
 	check(staff.rounds.map(func(r: RoundStats) -> String: return r.display_name) == ["Fireball", "Meteor", "Ballista", "Hail"], "the staff fires Fireball, Meteor, Ballista, Hail")
 	check(octo_w.rounds.map(func(r: RoundStats) -> String: return r.display_name) == ["Fireball", "Meteor", "Ballista", "Hail"], "the octo cannon fires the same four rounds")
 	check(staff.muzzle_velocity == 26.0 and staff.charge_levels.size() == 3 and octo_w.high_arc and octo_w.pitch_min_deg == 35.0, "same gunnery numbers as cannon / howitzer: the trajectory system is unchanged")
@@ -261,15 +264,15 @@ func _run() -> void:
 	var area_count := ctx.intel.areas.size()
 	var target_a := ranger.global_position + Vector3(8.0, 0.0, 2.0)
 	var launch := DroneAction.new(ranger, target_a)
-	check(launch.can_execute(ctx) and ranger.stats.spotter_radius < 7.0, "ranger can send the eagle (radius %.1f m, smaller than a drone's 7)" % ranger.stats.spotter_radius)
+	check(launch.can_execute(ctx) and ranger.spotter_spec().radius < 7.0, "ranger can send the eagle (radius %.1f m, smaller than a drone's 7)" % ranger.spotter_spec().radius)
 	var ap0 := ranger.ap
 	await launch.execute(ctx)
-	check(is_equal_approx(ap0 - ranger.ap, DroneAction.AP_COST) and ctx.intel.areas.size() == area_count + 1, "the eagle costs AP and opens a spotted area")
+	check(is_equal_approx(ap0 - ranger.ap, ranger.spotter_spec().ap_cost) and ctx.intel.areas.size() == area_count + 1, "the eagle costs AP and opens a spotted area")
 	var area: Dictionary = ranger.spotter_area
 	var eagle: Eagle = ranger.spotter as Eagle
-	check(eagle != null and eagle.is_inside_tree() and area["label"] == "eagle" and is_equal_approx(area["radius"], ranger.stats.spotter_radius), "a physical eagle hovers over its point")
+	check(eagle != null and eagle.is_inside_tree() and area["label"] == "eagle" and is_equal_approx(area["radius"], ranger.spotter_spec().radius), "a physical eagle hovers over its point")
 	check(area["expires"] > ctx.round_number + 1000, "the eagle stays (no expiry)")
-	check(ranger.drone_cooldown == DroneAction.EAGLE_COOLDOWN and not DroneAction.new(ranger, target_a + Vector3(2, 0, 0)).can_execute(ctx), "it can be moved only once per turn")
+	check(ranger.drone_cooldown == ranger.spotter_spec().cooldown_turns and not DroneAction.new(ranger, target_a + Vector3(2, 0, 0)).can_execute(ctx), "it can be moved only once per turn")
 	ranger.begin_turn()
 	check(ranger.drone_cooldown == 0 and DroneAction.new(ranger, target_a + Vector3(2, 0, 0)).can_execute(ctx), "...but again on the ranger's next turn")
 	ctx.intel.tick(ctx.round_number + 1)

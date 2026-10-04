@@ -4,10 +4,6 @@ extends Node3D
 ## Headless smoke test (user args after "--"):
 ##   godot --headless --path . -- --ai-vs-ai --fast --quit-on-end
 
-const TANK: UnitStats = preload("res://data/tank.tres")
-const HOWITZER: UnitStats = preload("res://data/howitzer.tres")
-const INFANTRY: UnitStats = preload("res://data/infantry.tres")
-
 const BOARD_SIZE := Vector2i(28, 22)   # columns x rows (offset layout)
 const HEX_SIZE := 1.0                  # hex circumradius, metres
 const MENU_SCENE := "res://scenes/start_menu.tscn"
@@ -17,6 +13,7 @@ const VICTORY_DELAY := 1.4             # seconds between the last blast and the 
 static var forced_seed := -1
 static var extra_keep_clear: Array[Vector2i] = []
 static var flat_ground := false   ## test hook: compose the map without hills
+static var show_loading := true   ## test hook: false builds the battle inside `_ready`, with no loading screen (headless never shows one)
 
 ## Pan the camera to the enemy's units when their turn starts (toggle: P). Your own turns always pan.
 var enemy_turn_pan := true
@@ -40,25 +37,39 @@ var _history_from_results := false          # the review was opened from the vic
 var _hud := Label.new()      # status lines
 var _hud_help := Label.new()   # settings + key cheat-sheet
 var _result := ""
+var _loading: LoadingScreen   # the cover shown while the battle is built; null when it is built in one go
+var _booting := true          # the battle is still being built: no input, no HUD refresh
 var _fire_rng := RandomNumberGenerator.new()
 ## Where each side's three units start (offset cells), in roster order: main unit, artillery piece, scout (see Factions).
 const SPAWN_CELLS := {
 	0: [Vector2i(9, 5), Vector2i(14, 3), Vector2i(17, 6)],
 	1: [Vector2i(18, 16), Vector2i(13, 18), Vector2i(9, 16)],
 }
-var _spawns := {}   # team -> [[UnitStats, cell], ...], filled from the factions picked in the menu (`_make_spawns`)
+var _spawns := {}   # team -> [[UnitBlueprint, cell], ...], filled from the factions picked in the menu (`_make_spawns`)
 
 
+## Builds the battle in phases; with a loading screen up, each phase waits one frame so the screen can repaint (without one
+## nothing ever suspends and the whole battle exists when `_ready` returns).
 func _ready() -> void:
+	set_process(false)
 	if _args.has("--fast"):
 		Engine.time_scale = 3.0
+	if show_loading and DisplayServer.get_name() != "headless" and not _args.has("--ai-vs-ai"):
+		_loading = LoadingScreen.attach(self)
 	_read_faction_args()
 	_make_spawns()
 	_fire_rng.randomize()
+	await _begin_phase("sky", 0.08)
 	_build_environment()
+	await _begin_phase("terrain", 0.45)
 	_layout = _compose_scene()
+	if _loading != null:
+		_loading.show_seed(_layout.seed)
+	await _begin_phase("board", 0.8)
 	_build_board()
+	await _begin_phase("units", 0.9)
 	_spawn_units()
+	await _begin_phase("final", 1.0)
 	_build_camera()
 	_build_hud()
 	add_child(_guide)
@@ -69,6 +80,7 @@ func _ready() -> void:
 	_ctx.root = self
 	_ctx.camera = _camera
 	_ctx.state = _state
+	_setup_rules()
 
 	for node: Node in [_turns, _player, _ai, _hot_seat]:
 		add_child(node)
@@ -83,7 +95,19 @@ func _ready() -> void:
 	_victory.menu_pressed.connect(func() -> void: get_tree().change_scene_to_file(MENU_SCENE))
 	_victory.history_pressed.connect(_open_history)
 	_review.closed.connect(_on_review_closed)
+	if _loading != null:
+		await _loading.finish()
+	_booting = false
+	set_process(true)
 	_turns.start(_ctx, _make_controllers(ai_vs_ai))
+
+
+## Names the phase about to run on the loading screen (when there is one) and lets it repaint before the work starts.
+func _begin_phase(key: String, progress: float) -> void:
+	if _loading == null:
+		return
+	_loading.enter(key, progress)
+	await get_tree().process_frame
 
 
 ## `--p1-faction=fantasy` / `--p2-faction=modern` (user args) set the factions without the menu (headless AI battles, tests).
@@ -107,6 +131,20 @@ func _make_spawns() -> void:
 		for i in roster.size():
 			entries.append([roster[i], SPAWN_CELLS[team][i]])
 		_spawns[team] = entries
+
+
+## Rewind rules per side: the person against the AI gets the run's rules (extra rewinds from upgrades...), hot seat gets no rewinds (the
+## other player is not looking, a rewind would be a free re-roll), the AI none. Undoing a move needs no rules and is always there.
+func _setup_rules() -> void:
+	for team: int in _spawns:
+		var rules := BattleRules.new()
+		if BattleConfig.two_player:
+			rules.rewind_charges = 0
+		elif team == BattleConfig.p1_team:
+			rules = RunState.rules()
+		else:
+			rules.rewind_charges = 0
+		_ctx.set_rules(team, rules)
 
 
 ## Who decides for each team: the player against the AI (on the side picked in the menu), two people behind the
@@ -169,7 +207,7 @@ func _on_round_started(_n: int) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if key == null or not key.pressed or key.echo:
+	if _booting or key == null or not key.pressed or key.echo:
 		return
 	match key.keycode:
 		KEY_R:
@@ -182,7 +220,22 @@ func _unhandled_input(event: InputEvent) -> void:
 			_sight.visible = not _sight.visible
 		KEY_P:
 			enemy_turn_pan = not enemy_turn_pan
+		KEY_F1:
+			_open_how_to_play()
 
+
+
+## F1: the how-to-play pages over the battle (own layer above the HUD, toolbar and results; closes with Esc / F1).
+func _open_how_to_play() -> void:
+	if get_node_or_null("HowToPlayLayer") != null:
+		return
+	var layer := CanvasLayer.new()
+	layer.name = "HowToPlayLayer"
+	layer.layer = 30
+	add_child(layer)
+	var screen := HowToPlayScreen.new()
+	screen.closed.connect(layer.queue_free)
+	layer.add_child(screen)
 
 
 ## Enemy units outside the viewer's line of sight vanish from the screen (model, label, ring).
@@ -209,7 +262,7 @@ func _process(_delta: float) -> void:
 	help.append("Tool: %s   Grid: %s   Shot cam: %s" % [_player.tool_label(), "on" if _view.grid_visible else "off",
 		"on" if _camera.shot_cam_enabled else "OFF"])
 	help.append("Enemy-turn pan: %s [P]   Map seed: %d (--seed=N replays it)" % ["on" if enemy_turn_pan else "off", _layout.seed])
-	help.append("[1-9] Toolbar  [G] Grid  [V] Shot cam  [L] Line of sight  [H] Shot review  [Space] End turn  [R] Restart")
+	help.append("[1-9] Toolbar  [G] Grid  [V] Shot cam  [L] Line of sight  [H] Shot review  [Z] Undo move  [X] Rewind turn  [Space] End turn  [R] Restart  [F1] How to play")
 	help.append("WASD pan   Q/E rotate   Wheel zoom")
 	if _result != "":
 		lines.append(_result + ("" if _victory.is_open() else "   [Enter] results"))
@@ -270,12 +323,19 @@ func _build_board() -> void:
 	_ctx.view = _view
 
 
+## Whether the roguelike run's upgrades (RunState) reach `team`: only the person's side in a single-player battle.
+func _gets_run_upgrades(team: int) -> bool:
+	return RunState.active and not BattleConfig.two_player and team == BattleConfig.p1_team
+
+
 func _spawn_units() -> void:
 	for team: int in _spawns:
 		for entry: Array in _spawns[team]:
 			var c := GridBoard.offset_to_axial(entry[1])
 			var unit := Unit.new()
-			unit.configure(entry[0], team, BattleConfig.color_of(team))
+			var blueprint: UnitBlueprint = entry[0]
+			var upgrades: Array = RunState.unit_modifiers(blueprint) if _gets_run_upgrades(team) else []
+			unit.configure(UnitProfile.create(blueprint, upgrades), team, BattleConfig.color_of(team))
 			add_child(unit)
 			_board.place(unit, c)
 			unit.snap_to(_board.cell_to_world(c, unit.rest_height()))

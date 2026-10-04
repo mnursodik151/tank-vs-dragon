@@ -27,8 +27,6 @@ const SIGMA_BEST := 0.02        ## sigma as a fraction of distance at fidelity 1
 const SIGMA_WORST := 0.30       ## ... and at fidelity 0
 const IMPACT_RADIUS := 6.0      ## area revealed around a shell that lands outside line of sight
 const IMPACT_ROUNDS := 2        ## ... for the rest of this round and the next
-const DRONE_RADIUS := 7.0
-const DRONE_ROUNDS := 2
 const PERSISTENT := 1000000      ## `rounds` of an area that stays until its owner dies (the ranger's eagle)
 
 ## Optional: when set, line-of-sight props on it hide points from ground units (see GridBoard.los_blocked).
@@ -145,6 +143,48 @@ func tick(round_number: int) -> void:
 			if node != null and is_instance_valid(node) and (node as Object).has_method("depart"):
 				node.depart()   # a drone flies off when its time is up
 	areas = keep
+
+
+# --- memento (undo / rewind, see BattleSnapshot) ------------------------------
+
+## The spotted areas as they are now: each record (kept by identity - a unit's `spotter_area` points at it) with a copy of its contents
+## and where its marker stands.
+func capture() -> Dictionary:
+	var list: Array = []
+	for a in areas:
+		var node: Variant = a.get("node")
+		var at := Vector3.ZERO
+		if node != null and is_instance_valid(node) and (node as Node3D).is_inside_tree():
+			at = (node as Node3D).global_position
+		list.append({"record": a, "copy": a.duplicate(), "marker_at": at})
+	return {"areas": list, "round": _round}
+
+
+## Brings the areas back: records opened since vanish (their drone / eagle marker is freed), moved ones return.
+func restore(state: Dictionary) -> void:
+	var keep: Array[Dictionary] = []
+	for entry: Dictionary in state["areas"]:
+		var record: Dictionary = entry["record"]
+		record.clear()
+		record.merge(entry["copy"])
+		keep.append(record)
+		var node: Variant = record.get("node")
+		if node != null and is_instance_valid(node) and (node as Node3D).is_inside_tree():
+			(node as Node3D).global_position = entry["marker_at"]
+	for a in areas:
+		if not _holds(keep, a):
+			var node: Variant = a.get("node")
+			if node != null and is_instance_valid(node):
+				(node as Node).queue_free()
+	areas = keep
+	_round = state["round"]
+
+
+static func _holds(list: Array[Dictionary], record: Dictionary) -> bool:
+	for r in list:
+		if is_same(r, record):
+			return true
+	return false
 
 
 # --- expanding sight ----------------------------------------------------------

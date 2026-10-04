@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="UnitBlueprint" format=3]
+
+[ext_resource type="Script" path="res://scripts/units/unit_blueprint.gd" id="1_bp"]
+[ext_resource type="Script" path="res://scripts/actions/action_spec.gd" id="2_spec"]
+[ext_resource type="Script" path="res://scripts/actions/ram_spec.gd" id="3_ram"]
+[ext_resource type="Script" path="res://scripts/actions/spotter_spec.gd" id="4_spot"]
+[ext_resource type="Resource" path="res://data/infantry.tres" id="5_stats"]
+
+[sub_resource type="Resource" id="Resource_move"]
+script = ExtResource("2_spec")
+kind = 0
+
+[sub_resource type="Resource" id="Resource_shoot"]
+script = ExtResource("2_spec")
+kind = 1
+
+[sub_resource type="Resource" id="Resource_spotter"]
+script = ExtResource("4_spot")
+kind = 2
+reach = 22.0
+radius = 7.0
+ap_cost = 2.0
+cooldown_turns = 3
+duration_rounds = 2
+
+[sub_resource type="Resource" id="Resource_ram"]
+script = ExtResource("3_ram")
+kind = 3
+
+[resource]
+script = ExtResource("1_bp")
+stats = ExtResource("5_stats")
+actions = Array[ExtResource("2_spec")]([SubResource("Resource_move"), SubResource("Resource_shoot"), SubResource("Resource_spotter"), SubResource("Resource_ram")])
+meta = {
+"faction": "modern",
+"slot": "scout",
+"role": "scout / anti-armor",
+"blurb": "Fast and fragile: rocket launcher, rifle and a spotting drone."
+}

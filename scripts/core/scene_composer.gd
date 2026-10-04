@@ -14,6 +14,7 @@ extends RefCounted
 
 const MAX_ATTEMPTS := 24
 const EDGE_MARGIN := 1                 ## props keep this many columns/rows away from the map edge
+const LONER_GAP := 3                   ## loner trees and large rocks keep this hex distance from their own kind
 const COPSE_FAMILIES := {              ## tree model families (stems share a prefix), with pick weights
 	"tree_single": 1.0,
 }
@@ -66,6 +67,8 @@ var _levels := {}                      ## axial cell -> elevation level
 var _layout: SceneLayout
 var _tree_cells: Array[Vector2i] = []
 var _rock_cells: Array[Vector2i] = []
+var _tree_near := {}                   ## axial cell -> true: within LONER_GAP - 1 hexes of a tree (loners keep their distance)
+var _rock_near := {}                   ## same for large rocks
 var _village_centre := GridBoard.NO_CELL
 var _village_lane := GridBoard.NO_CELL ## a free cell beside the village's heart: the road goes there
 var _river: Array[Vector2i] = []       ## the river's cells in flow order
@@ -96,6 +99,8 @@ func _compose_once(seed: int) -> SceneLayout:
 	_taken.clear()
 	_tree_cells.clear()
 	_rock_cells.clear()
+	_tree_near.clear()
+	_rock_near.clear()
 	_village_centre = GridBoard.NO_CELL
 	_village_lane = GridBoard.NO_CELL
 	_river.clear()
@@ -472,7 +477,7 @@ func _place_copses() -> void:
 
 func _place_loners() -> void:
 	for n in _count(loner_trees):
-		var c := _random_free(func(c: Vector2i) -> bool: return _distance_to_all(c, _tree_cells) >= 3)
+		var c := _random_free(func(c: Vector2i) -> bool: return not _tree_near.has(c))
 		if c == GridBoard.NO_CELL:
 			return
 		_add_prop(Props.Kind.TREE, c, _tree_model(""))
@@ -481,7 +486,7 @@ func _place_loners() -> void:
 func _place_large_rocks() -> void:
 	var models := Props.models(Props.Kind.ROCK_LARGE)
 	for n in _count(large_rocks):
-		var c := _random_free(func(c: Vector2i) -> bool: return _distance_to_all(c, _rock_cells) >= 3)
+		var c := _random_free(func(c: Vector2i) -> bool: return not _rock_near.has(c))
 		if c == GridBoard.NO_CELL:
 			return
 		_add_prop(Props.Kind.ROCK_LARGE, c, models[_rng.randi() % models.size()])
@@ -708,8 +713,25 @@ func _add_prop(kind: Props.Kind, c: Vector2i, model: String, yaw: float = NAN) -
 		_layout.props.append([kind, GridBoard.axial_to_offset(c), model, yaw])
 	if kind == Props.Kind.TREE:
 		_tree_cells.append(c)
+		_mark_near(_tree_near, c)
 	elif kind == Props.Kind.ROCK_LARGE:
 		_rock_cells.append(c)
+		_mark_near(_rock_near, c)
+
+
+## Flags every cell closer than LONER_GAP hexes to `c` in `zone`.
+func _mark_near(zone: Dictionary, c: Vector2i) -> void:
+	for cell in _disc(c, LONER_GAP - 1):
+		zone[cell] = true
+
+
+## The cells within `radius` hexes of `centre` (itself included), bounds not checked.
+func _disc(centre: Vector2i, radius: int) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for dq in range(-radius, radius + 1):
+		for dr in range(maxi(-radius, -dq - radius), mini(radius, -dq + radius) + 1):
+			out.append(centre + Vector2i(dq, dr))
+	return out
 
 
 ## A random cell of the board passing `accept`, or NO_CELL.
@@ -742,8 +764,8 @@ func _flat_free(c: Vector2i) -> bool:
 ## How many cells within `radius` hexes of `centre` (itself included) pass `accept`.
 func _count_around(centre: Vector2i, radius: int, accept: Callable) -> int:
 	var n := 0
-	for c in _board.all_cells():
-		if GridBoard.hex_distance(c, centre) <= radius and accept.call(c):
+	for c in _disc(centre, radius):
+		if _board.in_bounds(c) and accept.call(c):
 			n += 1
 	return n
 
@@ -759,10 +781,14 @@ func _take_random(options: Array[Vector2i]) -> Vector2i:
 ## `length` free cells in a row along a random hex direction ({"cells", "dir", "yaw"}, yaw laying a model's local x along the row),
 ## starting within `anchor_radius` of `anchor` when one is given. Empty when nothing fits after a few tries.
 func _find_line(length: int, anchor := GridBoard.NO_CELL, anchor_radius := 0) -> Dictionary:
+	var starts: Array[Vector2i] = []   # the free cells do not change while a line is searched for
+	for c in _board.all_cells():
+		if _free(c):
+			starts.append(c)
+	if starts.is_empty():
+		return {}
 	for attempt in 30:
-		var start := _random_free()
-		if start == GridBoard.NO_CELL:
-			return {}
+		var start := starts[_rng.randi() % starts.size()]
 		if anchor != GridBoard.NO_CELL and GridBoard.hex_distance(start, anchor) > anchor_radius:
 			continue
 		var dir := GridBoard.DIRS[_rng.randi() % GridBoard.DIRS.size()]
@@ -786,13 +812,6 @@ func _free_neighbours_of(cells: Array[Vector2i]) -> Array[Vector2i]:
 			if _free(n) and not out.has(n):
 				out.append(n)
 	return out
-
-
-func _distance_to_all(c: Vector2i, others: Array[Vector2i]) -> int:
-	var best := 1000
-	for o in others:
-		best = mini(best, GridBoard.hex_distance(c, o))
-	return best
 
 
 func _count(range_: Vector2i) -> int:

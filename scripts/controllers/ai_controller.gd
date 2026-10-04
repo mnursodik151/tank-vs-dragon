@@ -34,12 +34,13 @@ func decide(unit: Unit, ctx: BattleContext) -> Action:
 	var target := _nearest_enemy(unit, ctx)
 	if target == null:
 		return _search(unit, ctx)
-	for weapon in unit.stats.weapons:
-		if unit.ap + Action.AP_EPSILON < weapon.ap_cost:
-			continue
-		var shot := _plan_shot(unit, target, weapon, ctx)
-		if shot != null and shot.can_execute(ctx):
-			return shot
+	if unit.can_do(ActionSpec.Kind.SHOOT):   # the AI only uses what the unit's blueprint says it can do
+		for weapon in unit.stats.weapons:
+			if unit.ap + Action.AP_EPSILON < weapon.ap_cost:
+				continue
+			var shot := _plan_shot(unit, target, weapon, ctx)
+			if shot != null and shot.can_execute(ctx):
+				return shot
 	var ram := _plan_ram(unit, target, ctx)
 	if ram != null:
 		return ram
@@ -249,6 +250,8 @@ func _approach(unit: Unit, goal_point: Vector3, ctx: BattleContext) -> Action:
 
 ## Moves to the reachable cell whose distance to `goal_point` is closest to `preferred`, keeping `reserve` AP when possible.
 func _move_toward(unit: Unit, goal_point: Vector3, preferred: float, reserve: float, ctx: BattleContext) -> Action:
+	if not unit.can_do(ActionSpec.Kind.MOVE):
+		return null
 	var goal := Vector3(goal_point.x, 0.0, goal_point.z)
 	var per_weight := unit.stats.move_ap_per_weight
 

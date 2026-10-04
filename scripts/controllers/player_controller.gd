@@ -26,6 +26,7 @@ var _ui := CanvasLayer.new()
 var _toolbar := Toolbar.new()
 var _panel := GunneryPanel.new()
 var _last_hover := Vector3.INF
+var _end_turn_hinted := false   ## the "press Space to end your turn" popup has been shown for the current run of "nothing left to do"
 
 
 func _ready() -> void:
@@ -38,6 +39,9 @@ func _ready() -> void:
 
 
 func decide(unit: Unit, ctx: BattleContext) -> Action:
+	if unit != _unit:
+		_end_turn_hinted = false
+		_toolbar.hide_popup()
 	_unit = unit
 	_ctx = ctx
 	if not ctx.view.grid_toggled.is_connected(_on_grid_toggled):
@@ -62,6 +66,11 @@ func is_busy() -> bool:
 	return _busy
 
 
+## Out of AP but something could still be taken back: the turn waits for the player (Space ends it).
+func holds_turn(_unit: Unit, ctx: BattleContext) -> bool:
+	return ctx.history.can_undo_any(ctx)
+
+
 func current_tool() -> ToolEntry:
 	return tools[tool_index] if tool_index < tools.size() else null
 
@@ -76,8 +85,10 @@ func _process(_delta: float) -> void:
 	if not _active:
 		return
 	_toolbar.refresh(_unit)
+	_toolbar.set_undo_hint(_ctx.history.hint(_ctx))
 	if _busy:
 		return
+	_update_end_turn_hint()
 	var t := current_tool()
 	if t == null:
 		return
@@ -100,6 +111,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_select_tool(key.keycode - KEY_1)
 		elif key.keycode == KEY_SPACE or key.keycode == KEY_ENTER:
 			_finish(null)
+		elif key.keycode == KEY_Z or key.keycode == KEY_BACKSPACE:
+			_request_take_back(UndoMoveAction.new(_unit))
+		elif key.keycode == KEY_X:
+			_request_take_back(RewindAction.new(_unit))
 		return
 	var click := event as InputEventMouseButton
 	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
@@ -143,7 +158,7 @@ func _refresh() -> void:
 				_ctx.view.show_highlight(reach.keys(), Color(0.2, 0.5, 1.0, 0.30))
 		ToolEntry.Kind.DRONE:
 			_ctx.guide.show_disc("drone_range", Vector3(_unit.global_position.x, _ground(_unit.global_position) + 0.02, _unit.global_position.z),
-				_unit.stats.drone_range, Color(0.4, 0.9, 0.6, 0.10))
+				_unit.spotter_spec().reach, Color(0.4, 0.9, 0.6, 0.10))
 
 
 func _on_click() -> void:
@@ -168,7 +183,7 @@ func _on_click() -> void:
 				elif _unit.drone_cooldown > 0:
 					_toolbar.flash(_spotter_wait())
 				elif not drone.in_range():
-					_toolbar.flash("Out of %s range (%.0f m)" % [_unit.stats.spotter_kind, _unit.stats.drone_range])
+					_toolbar.flash("Out of %s range (%.0f m)" % [_unit.spotter_spec().spotter_kind, _unit.spotter_spec().reach])
 				else:
 					_toolbar.flash("Not enough AP (%.1f needed)" % drone.cost(_ctx))
 		ToolEntry.Kind.RAM:
@@ -214,6 +229,41 @@ func _open_gunnery(weapon: WeaponStats, yaw: float) -> void:
 		_refresh()
 
 
+## Z / Backspace undo the last move (free, always), X rewinds the whole turn (a shot, ram or spotter in it costs a rewind charge).
+## A refusal says why on the toolbar.
+func _request_take_back(take_back: TakeBackAction) -> void:
+	if take_back.can_execute(_ctx):
+		_finish(take_back)
+	else:
+		_toolbar.flash(take_back.refusal(_ctx))
+
+
+## True when nothing the unit can still afford is a weapon or the spotter - only moving or ramming (priced per hex) is left. A unit
+## whose toolbar has nothing but Move / Ram never counts (it would be "stuck" from the first second of its turn).
+func _only_move_or_ram_left() -> bool:
+	var has_other := false
+	for t in tools:
+		if t.kind == ToolEntry.Kind.WEAPON or t.kind == ToolEntry.Kind.DRONE:
+			has_other = true
+			var ready := _unit.drone_cooldown <= 0 if t.kind == ToolEntry.Kind.DRONE else true
+			if ready and _unit.ap + Action.AP_EPSILON >= t.cost():
+				return false
+	return has_other
+
+
+## A gentle popup, once, when the unit has nothing left to do but move or ram: Space ends the turn. It comes back if an undo brings
+## options back and they are used up again.
+func _update_end_turn_hint() -> void:
+	if not _only_move_or_ram_left():
+		_end_turn_hinted = false
+		return
+	if _end_turn_hinted:
+		return
+	_end_turn_hinted = true
+	var out_of_ap := _unit.ap < Action.AP_EPSILON
+	_toolbar.show_popup("Out of AP - press SPACE to end your turn" if out_of_ap else "Only moving is left - press SPACE to end your turn")
+
+
 func _finish(action: Action) -> void:
 	if not _active:
 		return
@@ -253,8 +303,8 @@ func _update_bearing(weapon: WeaponStats) -> void:
 
 ## Why the spotting tool cannot be used right now: "Drone recharging (2 more turns)" / "Eagle resting (once per turn)".
 func _spotter_wait() -> String:
-	var kind := _unit.stats.spotter_name()
-	if _unit.stats.spotter_kind == "eagle":
+	var kind := _unit.spotter_spec().spotter_name()
+	if _unit.spotter_spec().is_eagle():
 		return "%s resting - it can be moved once per turn" % kind
 	return "%s recharging (%d more turn%s)" % [kind, _unit.drone_cooldown, "s" if _unit.drone_cooldown > 1 else ""]
 
@@ -268,7 +318,7 @@ func _update_drone_preview() -> void:
 	var drone := DroneAction.new(_unit, p as Vector3)
 	var col := Color(0.4, 0.9, 0.6) if drone.in_range() and _unit.drone_cooldown <= 0 else BAD_COLOR
 	var at: Vector3 = p
-	_ctx.guide.show_disc("drone_area", Vector3(at.x, _ground(at) + 0.03, at.z), _unit.stats.spotter_radius, Color(col, 0.30))
+	_ctx.guide.show_disc("drone_area", Vector3(at.x, _ground(at) + 0.03, at.z), _unit.spotter_spec().radius, Color(col, 0.30))
 
 
 ## Ground height under a world position (hills), for drawing guides on the surface.

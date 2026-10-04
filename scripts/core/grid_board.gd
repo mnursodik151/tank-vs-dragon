@@ -13,6 +13,7 @@ const NO_CELL := Vector2i(-999999, -999999)
 signal terrain_changed(cell: Vector2i, type: int)
 signal prop_damaged(cell: Vector2i, hp: float)
 signal prop_destroyed(cell: Vector2i, kind: int)
+signal prop_restored(cell: Vector2i, kind: int)   ## a rewind brought a destroyed prop back
 
 ## Ground elevation: every cell has a level 0..MAX_LEVEL (0 = flat ground), ELEVATION_STEP metres each.
 ## Neighbours one level apart form a slope (walking it costs extra AP uphill, a little downhill). A difference
@@ -475,6 +476,38 @@ func tick_fires(wind_push: Vector3, rng: RandomNumberGenerator) -> void:
 	for n in to_ignite:
 		if terrain_at(n) != Terrain.Type.FIRE:
 			ignite(n, FIRE_DURATION - 1)
+
+
+# --- memento (undo / rewind, see BattleSnapshot) ------------------------------
+
+## The parts of the board a battle changes: prop hit points / destruction, terrain (craters, scorch), fires. The map itself
+## (levels, water, roads) never changes during a battle and is not captured; unit placement is re-derived by `resync`.
+func capture() -> Dictionary:
+	return {"props": _props.duplicate(true), "blocked": _blocked.duplicate(), "terrain": _terrain.duplicate(),
+		"weights": _weights.duplicate(), "fires": _fires.duplicate()}
+
+
+## Puts the board back as `state` says and tells the views what came back (`terrain_changed`, `prop_restored`).
+func restore(state: Dictionary) -> void:
+	var old_terrain := _terrain
+	var old_props := _props
+	_props = (state["props"] as Dictionary).duplicate(true)
+	_blocked = (state["blocked"] as Dictionary).duplicate()
+	_terrain = (state["terrain"] as Dictionary).duplicate()
+	_weights = (state["weights"] as Dictionary).duplicate()
+	_fires = (state["fires"] as Dictionary).duplicate()
+	_occluders_dirty = true
+	var touched := {}
+	for c: Vector2i in old_terrain:
+		touched[c] = true
+	for c: Vector2i in _terrain:
+		touched[c] = true
+	for c: Vector2i in touched:
+		if old_terrain.get(c, Terrain.Type.GRASS) != _terrain.get(c, Terrain.Type.GRASS):
+			terrain_changed.emit(c, _terrain.get(c, Terrain.Type.GRASS))
+	for c: Vector2i in _props:
+		if not old_props.has(c):
+			prop_restored.emit(c, _props[c]["kind"])
 
 
 func unit_at(c: Vector2i) -> Unit:

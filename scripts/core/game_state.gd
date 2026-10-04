@@ -142,6 +142,28 @@ func note_terrain(rec: ShotRecord, craters: int, fires: int) -> void:
 	totals["fires"] += fires
 
 
+## Counts a rewind in the totals (`whole_turn` = the whole turn was taken back).
+func note_undo(whole_turn: bool) -> void:
+	totals["undos"] = totals.get("undos", 0) + 1
+	if whole_turn:
+		totals["rewound_turns"] = totals.get("rewound_turns", 0) + 1
+
+
+## What an action can add to the record: how many shots exist and the running totals. A rewind drops everything newer.
+func capture() -> Dictionary:
+	return {"shots": shots.size(), "next_id": _next_id, "totals": totals.duplicate(true)}
+
+
+func restore(state: Dictionary) -> void:
+	shots.resize(state["shots"])
+	_next_id = state["next_id"]
+	var undos: int = totals.get("undos", 0)   # the count of rewinds themselves is not rewound
+	var turns: int = totals.get("rewound_turns", 0)
+	totals = (state["totals"] as Dictionary).duplicate(true)
+	totals["undos"] = undos
+	totals["rewound_turns"] = turns
+
+
 func battle_finished(p_winner: int, p_rounds: int) -> void:
 	winner = p_winner
 	rounds_played = p_rounds
@@ -168,4 +190,6 @@ func summary_lines() -> PackedStringArray:
 	out.append("  armor: %d penetrations, %d hits absorbed | terrain: %d craters, %d fire cells" % [
 		totals["penetrations"], totals["armor_absorbed"], totals["craters"], totals["fires"]])
 	out.append("  rounds fired: %s" % str(totals["rounds_by_type"]))
+	if totals.get("undos", 0) > 0:
+		out.append("  undos used: %d (%d whole turns)" % [totals["undos"], totals.get("rewound_turns", 0)])
 	return out

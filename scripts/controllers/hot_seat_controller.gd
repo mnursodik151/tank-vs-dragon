@@ -19,3 +19,7 @@ func decide(unit: Unit, ctx: BattleContext) -> Action:
 			_reported[unit.team] = ctx.state.shots[ctx.state.shots.size() - 1].id
 		await handoff.run(unit.team, unit, ctx, report)
 	return await inner.decide(unit, ctx)
+
+
+func holds_turn(unit: Unit, ctx: BattleContext) -> bool:
+	return inner.holds_turn(unit, ctx)

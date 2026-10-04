@@ -10,12 +10,8 @@ extends Action
 ## hit points: a rammed prop takes the rammer's armor as damage and is destroyed at 0 hp. Slopes cost extra AP
 ## like a walk; a cliff face (see GridBoard.is_cliff) simply stops the dash.
 
+## The numbers of the run (speed, length cap, damage, wear, knock-back) are the actor's RamSpec (`ram.*` stats), so upgrades reach them.
 const STEP := 0.05               ## metres between collision samples along the line
-const MAX_RUN := 60.0            ## hard cap on the run length
-const DASH_SPEED_MULT := 2.0     ## the run animates faster than a walk
-const ARMOR_WEAR := 0.5          ## plate strength lost per point of ram damage taken
-const KNOCK_PER_ARMOR := 0.6     ## launch speed (m/s, for mass 1) per point of armor difference; ground friction eats most of it
-const KNOCK_MASS_EXPONENT := 0.3 ## launch speed falls with mass^this: heavier units are shoved less
 const OBSTACLE_ARMOR := 8.0      ## blocked cell that is not a catalogued prop
 
 var dir: Vector3                 ## flat unit vector of the run
@@ -23,6 +19,8 @@ var dir: Vector3                 ## flat unit vector of the run
 var hit_unit: Unit               ## unit the run ends against, if any
 var hit_cell := GridBoard.NO_CELL ## obstacle cell the run ends against, if any
 var end_point: Vector3           ## where the unit ends up (y = rest height)
+
+var spec: RamSpec                ## the actor's ram parameters (stock defaults when its blueprint has none)
 
 var _planned := false
 var _cost := 0.0
@@ -34,6 +32,7 @@ var _hit_kind := -1
 func _init(p_actor: Unit, p_dir: Vector3) -> void:
 	super(p_actor)
 	dir = Vector3(p_dir.x, 0.0, p_dir.z).normalized()
+	spec = p_actor.profile.ram() if p_actor.profile != null and p_actor.profile.ram() != null else RamSpec.new()
 
 
 ## Walks the line once per action instance and records where it ends, what it costs and what it hits.
@@ -42,7 +41,7 @@ func plan(ctx: BattleContext) -> void:
 		return
 	_planned = true
 	var board := ctx.board
-	var per_weight := actor.stats.move_ap_per_weight
+	var per_weight := actor.stats.move_ap_per_weight * spec.ap_cost_mult
 	var start := actor.global_position
 	var rest := actor.rest_height()
 	end_point = Vector3(start.x, rest + board.surface_y(start), start.z)
@@ -53,7 +52,7 @@ func plan(ctx: BattleContext) -> void:
 	var pos := end_point
 	var cell := actor.cell
 	var budget := actor.ap + AP_EPSILON
-	while _run < MAX_RUN:
+	while _run < spec.max_run:
 		var nxt := pos + dir * STEP
 		# Someone in the way (only those ahead of us, so touching units can be rammed or left behind).
 		for other in ctx.alive_units():
@@ -116,7 +115,7 @@ func cost(ctx: BattleContext) -> float:
 
 func can_execute(ctx: BattleContext) -> bool:
 	plan(ctx)
-	return super(ctx) and (_run > STEP * 0.5 or has_impact())
+	return super(ctx) and actor.can_do(ActionSpec.Kind.RAM) and (_run > STEP * 0.5 or has_impact())
 
 
 ## Armor values at the point of impact: x = the rammer's front plate, y = what it strikes
@@ -134,7 +133,7 @@ func armor_pair() -> Vector2:
 ## (damage dealt to the target, damage taken by the rammer) if the run were executed now.
 func exchange() -> Vector2:
 	var armors := armor_pair()
-	return Vector2(armors.x, armors.y) if has_impact() else Vector2.ZERO
+	return Vector2(armors.x * spec.damage_mult, armors.y) if has_impact() else Vector2.ZERO
 
 
 func execute(ctx: BattleContext) -> void:
@@ -143,7 +142,7 @@ func execute(ctx: BattleContext) -> void:
 	actor.face(dir)
 	ctx.board.place(actor, ctx.board.world_to_cell(end_point))   # logical position updates immediately
 	if _run > STEP * 0.5:
-		await actor.walk([end_point] as Array[Vector3], DASH_SPEED_MULT)
+		await actor.walk([end_point] as Array[Vector3], spec.speed_mult)
 	if has_impact():
 		_resolve_impact(ctx)
 	# Let the physics server step once so any knock-back velocity is live before settle polling.
@@ -152,24 +151,24 @@ func execute(ctx: BattleContext) -> void:
 
 func _resolve_impact(ctx: BattleContext) -> void:
 	var armors := armor_pair()
-	var mine := armors.x
+	var mine := armors.x * spec.damage_mult   # what the rammer deals
 	var theirs := armors.y
 	if hit_unit != null:
 		var sector := hit_unit.armor_sector(actor.global_position - hit_unit.global_position)
-		_popup(ctx, hit_unit, hit_unit.take_ram(mine, sector, ARMOR_WEAR))
+		_popup(ctx, hit_unit, hit_unit.take_ram(mine, sector, spec.armor_wear))
 		if hit_unit.is_alive() and mine > theirs:
 			var away := hit_unit.global_position - actor.global_position
 			var push_dir := Vector3(away.x, 0.0, away.z)
 			push_dir = push_dir.normalized() if push_dir.length() > 0.001 else dir
-			var speed := (mine - theirs) * KNOCK_PER_ARMOR
-			# Unit.launch divides by mass, so pre-multiply to land on mass^KNOCK_MASS_EXPONENT overall.
-			hit_unit.launch(push_dir * speed * pow(hit_unit.stats.mass, 1.0 - KNOCK_MASS_EXPONENT))
+			var speed := (mine - theirs) * spec.knock_per_armor
+			# Unit.launch divides by mass, so pre-multiply to land on mass^knock_mass_exponent overall.
+			hit_unit.launch(push_dir * speed * pow(hit_unit.stats.mass, 1.0 - spec.knock_mass_exponent))
 	if hit_cell != GridBoard.NO_CELL and _hit_kind >= 0:
 		var name := Props.kind_name(_hit_kind as Props.Kind)
 		var left := ctx.board.damage_prop(hit_cell, mine)
 		FloatingText.spawn(ctx.root, ctx.board.cell_to_world(hit_cell, 1.2),
 			"%s -%.0f" % [name, mine] if left > 0.0 else "%s destroyed" % name, Color(0.8, 0.75, 0.55))
-	_popup(ctx, actor, actor.take_ram(theirs, HitResult.Sector.FRONT, ARMOR_WEAR))
+	_popup(ctx, actor, actor.take_ram(theirs, HitResult.Sector.FRONT, spec.armor_wear))
 
 
 func _popup(ctx: BattleContext, unit: Unit, res: HitResult) -> void:

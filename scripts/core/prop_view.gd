@@ -15,6 +15,7 @@ const PACK_TONE := Color(0.82, 0.82, 0.82)   ## Hexagon Pack colours are bright 
 
 static var _toned_mats: Dictionary = {}     # pack material -> darkened copy (shared by every prop)
 static var _bounds: Dictionary = {}   # model stem -> AABB in the model's own space
+static var _hulls: Dictionary = {}    # model stem -> convex-hull points in the model's own space (building one is the slow part of a prop)
 
 var _bodies: Dictionary = {}   # cell -> StaticBody3D
 
@@ -24,6 +25,7 @@ func build(board: GridBoard) -> void:
 		_build_prop(board, c, board.prop_at(c) as Props.Kind, board.prop_model(c))
 	board.prop_destroyed.connect(_on_prop_destroyed)
 	board.prop_damaged.connect(_on_prop_damaged)
+	board.prop_restored.connect(func(c: Vector2i, kind: int) -> void: _build_prop(board, c, kind as Props.Kind, board.prop_model(c)))
 
 
 func _on_prop_destroyed(c: Vector2i, _kind: int) -> void:
@@ -129,7 +131,8 @@ func _add_model(body: StaticBody3D, kind: Props.Kind, model: String, offset: Vec
 		_:
 			var hull := ConvexPolygonShape3D.new()
 			var pts := PackedVector3Array()
-			_collect_hull(inst, Transform3D.IDENTITY, pts)
+			for p in _model_hull(model, inst):
+				pts.append(inst.transform * p)
 			hull.points = pts
 			col.shape = hull
 	col.name = "Collider_" + model
@@ -172,6 +175,15 @@ func _gather_boxes(n: Node, parent_xf: Transform3D, out: Array[AABB]) -> void:
 		_gather_boxes(child, xf, out)
 
 
+## The model's hull points in its own space (before the instance's scale, yaw and offset), built once per model stem.
+func _model_hull(model: String, inst: Node3D) -> PackedVector3Array:
+	if not _hulls.has(model):
+		var pts := PackedVector3Array()
+		_collect_hull(inst, inst.transform.affine_inverse(), pts)   # cancels the instance's own transform
+		_hulls[model] = pts
+	return _hulls[model]
+
+
 ## Convex-hull points of every mesh below `n`, in the space the traversal started in (the body's, when
 ## it starts at a model whose transform is already set).
 func _collect_hull(n: Node, parent_xf: Transform3D, out: PackedVector3Array) -> void:
@@ -179,7 +191,7 @@ func _collect_hull(n: Node, parent_xf: Transform3D, out: PackedVector3Array) -> 
 	if n is Node3D:
 		xf = parent_xf * (n as Node3D).transform
 	if n is MeshInstance3D:
-		var shape := (n as MeshInstance3D).mesh.create_convex_shape(true, true)
+		var shape := (n as MeshInstance3D).mesh.create_convex_shape(true, false)   # no simplify pass: it costs 30-130 ms per model
 		if shape != null:
 			for p in shape.points:
 				out.append(xf * p)

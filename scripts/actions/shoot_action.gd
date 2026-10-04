@@ -30,7 +30,7 @@ func cost(_ctx: BattleContext) -> float:
 
 
 func can_execute(ctx: BattleContext) -> bool:
-	return super(ctx) and actor.stats.weapons.has(weapon)
+	return super(ctx) and actor.can_do(ActionSpec.Kind.SHOOT) and actor.stats.owns_weapon(weapon)
 
 
 func execute(ctx: BattleContext) -> void:

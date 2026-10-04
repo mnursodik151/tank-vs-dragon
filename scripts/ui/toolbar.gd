@@ -9,6 +9,10 @@ var _row := HBoxContainer.new()
 var _slots: Array[ToolSlot] = []
 var _ap := Label.new()
 var _notice := Label.new()
+var _undo := Label.new()
+var _popup := PanelContainer.new()
+var _popup_label := Label.new()
+var _popup_tween: Tween
 var _notice_tween: Tween
 
 
@@ -40,6 +44,30 @@ func _ready() -> void:
 	_notice.modulate.a = 0.0
 	add_child(_notice)
 
+	_undo.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_undo.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_undo.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_undo.offset_bottom = -154.0
+	_style_label(_undo, UiTheme.SMALL)
+	_undo.add_theme_color_override("font_color", Color(0.65, 0.85, 1.0))
+	add_child(_undo)
+
+	# the gentle popup (e.g. "press SPACE to end your turn"): a small slate panel above the bar that fades in and out by itself
+	_popup.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_popup.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_popup.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_popup.offset_bottom = -184.0
+	_popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_popup.add_theme_stylebox_override("panel", UiTheme.panel_style(10, 1))
+	_popup.modulate.a = 0.0
+	_popup_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_popup_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_popup_label.add_theme_font_override("font", UiTheme.font)
+	_popup_label.add_theme_font_size_override("font_size", UiTheme.SMALL)
+	_popup_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
+	_popup.add_child(_popup_label)
+	add_child(_popup)
+
 
 ## Rebuilds the slots for the unit about to act.
 func setup(entries: Array[ToolEntry], unit: Unit) -> void:
@@ -66,6 +94,29 @@ func refresh(unit: Unit) -> void:
 		s.cooldown = unit.drone_cooldown if s.entry.kind == ToolEntry.Kind.DRONE else 0
 		s.affordable = unit.ap + Action.AP_EPSILON >= s.entry.cost() and s.cooldown <= 0
 	_ap.text = "AP %.1f / %.1f" % [unit.ap, unit.stats.max_ap]
+
+
+## Standing line above the bar: what can be taken back right now ("[Z] Undo move   1 rewind left").
+func set_undo_hint(text: String) -> void:
+	_undo.text = text
+
+
+## Gentle, self-dismissing message above the bar: fades in, stays `hold` seconds, fades out. Never blocks input.
+func show_popup(text: String, hold: float = 4.5) -> void:
+	_popup_label.text = text
+	if _popup_tween != null:
+		_popup_tween.kill()
+	_popup.modulate.a = 0.0
+	_popup_tween = create_tween()
+	_popup_tween.tween_property(_popup, "modulate:a", 1.0, 0.4)
+	_popup_tween.tween_interval(hold)
+	_popup_tween.tween_property(_popup, "modulate:a", 0.0, 1.0)
+
+
+func hide_popup() -> void:
+	if _popup_tween != null:
+		_popup_tween.kill()
+	_popup.modulate.a = 0.0
 
 
 ## Brief warning above the bar ("Not enough AP").

@@ -12,7 +12,8 @@ signal died(unit: Unit)
 const LAYER_TERRAIN := 1 << 0
 const LAYER_UNITS := 1 << 1
 
-var stats: UnitStats
+var profile: UnitProfile                            ## the unit's private, upgradable parameters (see UnitProfile)
+var stats: UnitStats                                ## effective stats: `profile.stats`, what the game code reads
 var team: int = 0
 var team_color := Color.WHITE                       ## the tint chosen for this unit's side (start menu)
 var cell: Vector2i = Vector2i.ZERO
@@ -24,15 +25,8 @@ var spotter: Drone                                  ## the drone / eagle this un
 var spotter_area: Dictionary = {}                   ## its Intel area record (an eagle's moves with it)
 var burning := 0                                   ## turns of burning left (halves armor, 1 dmg per turn)
 
-const BURN_DAMAGE := 1.0
-const BURN_ARMOR_MULT := 0.5
-const MAX_ABSORB := 0.85       ## an armor plate never stops more than this share of a hit
-const WEAR_ON_PEN := 0.12      ## plate strength lost (fraction) when a hit penetrates it
-const WEAR_ON_ABSORB := 0.5    ## plate strength lost per point of damage it stopped
-const FRONT_ARC_DEG := 50.0    ## hit within this angle of the hull's heading = front plate
-const REAR_ARC_DEG := 130.0    ## beyond this = rear plate, in between = side
-
 var _dead := false
+var _shape: CylinderShape3D
 var _label: Label3D
 var _ring: MeshInstance3D
 var _concealed := false   # hidden from the player: outside their line of sight (see set_concealed)
@@ -65,20 +59,20 @@ func _init() -> void:
 
 ## Builds the collider + visuals: the glTF model named by `stats.model` (see UnitModel) or, without one, placeholder boxes.
 ## Nothing else depends on the visuals (only `face`, `aim`, `equip` and `muzzle_position` touch the nodes).
-func configure(p_stats: UnitStats, p_team: int, color: Color) -> void:
-	stats = p_stats
+## `source` is the unit's UnitProfile (blueprint + upgrades), or a plain UnitBlueprint for a unit without upgrades.
+func configure(source: Variant, p_team: int, color: Color) -> void:
+	profile = source as UnitProfile if source is UnitProfile else UnitProfile.create(source as UnitBlueprint)
+	stats = profile.stats
 	team = p_team
 	team_color = color
-	hp =float(stats.max_hp)
+	hp = float(stats.max_hp)
 	armor = PackedFloat32Array([stats.armor_front, stats.armor_side, stats.armor_rear])
-	mass = stats.mass
 
-	var shape := CylinderShape3D.new()
-	shape.radius = stats.radius
-	shape.height = stats.height
+	_shape = CylinderShape3D.new()
 	var col := CollisionShape3D.new()
-	col.shape = shape
+	col.shape = _shape
 	add_child(col)
+	_apply_body()
 
 	_build_visuals(color)
 
@@ -89,6 +83,24 @@ func configure(p_stats: UnitStats, p_team: int, color: Color) -> void:
 	_label.no_depth_test = true
 	_label.position = Vector3(0.0, stats.height / 2.0 + 0.45, 0.0)
 	add_child(_label)
+	refresh_label()
+	profile.changed.connect(_on_profile_changed)
+
+
+## Body parameters that come from the stats: mass, collider size, how the body slides and bounces when it is shoved.
+func _apply_body() -> void:
+	mass = stats.mass
+	_shape.radius = stats.radius
+	_shape.height = stats.height
+	linear_damp = stats.linear_damp
+	physics_material_override.friction = stats.friction
+	physics_material_override.bounce = stats.bounce
+
+
+## An upgrade (or its removal) changed the numbers mid-game: follow with the body and the label.
+func _on_profile_changed() -> void:
+	_apply_body()
+	hp = minf(hp, float(stats.max_hp))
 	refresh_label()
 
 
@@ -190,20 +202,30 @@ func has_weapon() -> bool:
 	return not stats.weapons.is_empty()
 
 
+## Whether this unit's blueprint lists the action `kind`.
+func can_do(kind: ActionSpec.Kind) -> bool:
+	return profile.can(kind)
+
+
+func spotter_spec() -> SpotterSpec:
+	return profile.spotter()
+
+
 func is_alive() -> bool:
 	return not _dead and hp > 0.0
 
 
+## A new turn: AP = the unit's per-turn grant plus whatever share of the unspent AP it may carry over.
 func begin_turn() -> void:
-	ap = stats.max_ap
+	ap = stats.max_ap + minf(ap * stats.ap_carry, stats.ap_carry_cap)
 	if drone_cooldown > 0:
 		drone_cooldown -= 1
 	if burning > 0:
 		burning -= 1
-		take_damage(BURN_DAMAGE)
+		take_damage(stats.burn_damage)
 		if is_inside_tree():
 			FloatingText.spawn(get_parent(), global_position + Vector3(0.0, stats.height / 2.0 + 0.8, 0.0),
-				"BURNING -%.0f" % BURN_DAMAGE, Color(1.0, 0.55, 0.2))
+				"BURNING -%.0f" % stats.burn_damage, Color(1.0, 0.55, 0.2))
 	refresh_label()
 
 
@@ -214,7 +236,7 @@ func spend_ap(amount: float) -> void:
 
 ## Direct damage that ignores armor (burning).
 func take_damage(amount: float) -> void:
-	hp = maxf(0.0, hp - amount)
+	hp = maxf(0.0, hp - amount * stats.damage_taken_mult)
 	refresh_label()
 	if hp <= 0.0001:
 		die()
@@ -223,7 +245,7 @@ func take_damage(amount: float) -> void:
 ## Sets the unit on fire for `turns` of its own turns: armor effectiveness is halved meanwhile.
 func ignite(turns: int) -> void:
 	if is_alive():
-		burning = maxi(burning, turns)
+		burning = maxi(burning, ceili(turns * stats.burn_duration_mult))
 		refresh_label()
 
 
@@ -235,16 +257,16 @@ func armor_sector(to_hit: Vector3) -> HitResult.Sector:
 	var yaw := _hull.rotation.y if _hull != null else 0.0
 	var forward := Vector3(sin(yaw), 0.0, cos(yaw))
 	var angle := rad_to_deg(forward.angle_to(flat.normalized()))
-	if angle <= FRONT_ARC_DEG:
+	if angle <= stats.front_arc_deg:
 		return HitResult.Sector.FRONT
-	if angle >= REAR_ARC_DEG:
+	if angle >= stats.rear_arc_deg:
 		return HitResult.Sector.REAR
 	return HitResult.Sector.SIDE
 
 
 ## Plate strength that currently meets a hit on `sector` (burning halves it).
 func effective_armor(sector: int) -> float:
-	return armor[sector] * (BURN_ARMOR_MULT if burning > 0 else 1.0)
+	return armor[sector] * (stats.burn_armor_mult if burning > 0 else 1.0)
 
 
 ## Resolves a hit against armor. A hit whose `pen`etration reaches the plate strength bypasses it
@@ -262,12 +284,13 @@ func take_hit(damage: float, pen: float, to_hit: Vector3) -> HitResult:
 	elif pen >= plate:
 		res.outcome = HitResult.Outcome.PENETRATED
 		res.damage = damage
-		armor[res.sector] = maxf(0.0, armor[res.sector] - armor[res.sector] * WEAR_ON_PEN)
+		armor[res.sector] = maxf(0.0, armor[res.sector] - armor[res.sector] * stats.wear_on_pen)
 	else:
-		var stopped := clampf((plate - pen) / plate, 0.0, 1.0) * MAX_ABSORB
+		var stopped := clampf((plate - pen) / plate, 0.0, 1.0) * stats.max_absorb
 		res.outcome = HitResult.Outcome.ABSORBED
 		res.damage = damage * (1.0 - stopped)
-		armor[res.sector] = maxf(0.0, armor[res.sector] - damage * stopped * WEAR_ON_ABSORB)
+		armor[res.sector] = maxf(0.0, armor[res.sector] - damage * stopped * stats.wear_on_absorb)
+	res.damage *= stats.damage_taken_mult
 	res.armor_after = armor[res.sector]
 	hp = maxf(0.0, hp - res.damage)
 	res.killed = hp <= 0.0001
@@ -290,7 +313,8 @@ func take_ram(damage: float, sector: HitResult.Sector, wear: float) -> HitResult
 	res.armor_before = armor[sector]
 	armor[sector] = maxf(0.0, armor[sector] - damage * wear)
 	res.armor_after = armor[sector]
-	hp = maxf(0.0, hp - damage)
+	res.damage = damage * stats.damage_taken_mult
+	hp = maxf(0.0, hp - res.damage)
 	res.killed = hp <= 0.0001
 	refresh_label()
 	if res.killed:
@@ -337,7 +361,8 @@ func die() -> void:
 
 
 func _hide_corpse() -> void:
-	visible = false
+	if _dead:   # (a rewind may have brought the unit back in the meantime)
+		visible = false
 
 
 ## Hides (or shows again) everything the player could read off this unit: the model, the team ring and the
@@ -369,6 +394,49 @@ func refresh_label() -> void:
 	if burning > 0:
 		text += "  BURNING"
 	_label.text = text
+
+
+# --- memento (undo / rewind, see BattleSnapshot) ------------------------------
+
+## Everything about this unit that an action can change, for CommandHistory to put back later.
+func capture() -> Dictionary:
+	return {
+		"dead": _dead, "pos": global_position, "cell": cell, "hp": hp, "ap": ap, "armor": armor.duplicate(), "burning": burning,
+		"cooldown": drone_cooldown, "spotter": spotter, "spotter_area": spotter_area,
+		"hull": _hull.rotation.y, "turret": _turret.rotation.y, "barrel": _barrel.rotation.x,
+	}
+
+
+## Puts the unit back as `state` (from `capture`) says - including a unit that died since, which stands up again.
+func restore(state: Dictionary) -> void:
+	if state["dead"]:
+		return   # it was already a corpse: nothing an action did since can matter
+	if _dead:
+		_dead = false
+		collision_layer = LAYER_UNITS
+		collision_mask = LAYER_TERRAIN | LAYER_UNITS
+		visible = true
+		if _rig != null:
+			_rig.set_state(SoldierRig.State.IDLE)
+	_concealed = false
+	for node: Node3D in [_hull, _turret, _ring, _label]:
+		if node != null:
+			node.visible = true
+	freeze = true
+	linear_velocity = Vector3.ZERO
+	global_position = state["pos"]
+	cell = state["cell"]
+	hp = state["hp"]
+	ap = state["ap"]
+	armor = (state["armor"] as PackedFloat32Array).duplicate()
+	burning = state["burning"]
+	drone_cooldown = state["cooldown"]
+	spotter = state["spotter"] if is_instance_valid(state["spotter"]) else null
+	spotter_area = state["spotter_area"]
+	_hull.rotation.y = state["hull"]
+	_turret.rotation.y = state["turret"]
+	_barrel.rotation.x = state["barrel"]
+	refresh_label()
 
 
 # --- facing / aiming --------------------------------------------------------
@@ -427,7 +495,7 @@ func walk(waypoints: Array[Vector3], speed_mult: float = 1.0) -> void:
 func launch(impulse: Vector3) -> void:
 	freeze = false
 	sleeping = false
-	linear_velocity = impulse / mass
+	linear_velocity = impulse / mass * stats.knockback_taken
 
 
 func is_settled(speed_epsilon: float = 0.05) -> bool:

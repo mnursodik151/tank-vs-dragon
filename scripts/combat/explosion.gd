@@ -21,11 +21,8 @@ const BOMBLET_DELAY := 0.09
 const PROP_RADIUS := 0.5         ## a prop counts as a disc this wide when measuring blast distance
 const TERRAIN_COVER := 0.5       ## share soaked when the ground itself (a hill) lies between blast and unit
 const COVER_SLACK := 0.2         ## a blocker this close to the blast point is the surface it burst on, not cover
-const BOMBLET_IMPULSE := 2.0
 const HAIL_DELAY := 0.07         ## seconds between the ice stones of an airburst
-const HAIL_IMPULSE := 1.5
 const METEOR_SLIDE := 0.4        ## share of its sideways speed the rock keeps off the impact
-const METEOR_IMPULSE := 5.0      ## launch impulse of a meteor's bounce blast at its centre
 const METEOR_MAX_SPEED := 9.0    ## the rock leaves its impact at most this fast (m/s)
 const METEOR_MIN_LIFT := 4.5     ## ... and at least this much upward, so even a glancing hit visibly bounces
 
@@ -56,8 +53,8 @@ static func cluster(ctx: BattleContext, point: Vector3, weapon: WeaponStats, amm
 			continue   # fell off the map
 		if shot != null:
 			shot.blasts += 1
-		lines.append_array(_blast(ctx, p, ammo.sub_radius, ammo.sub_damage, weapon.penetration * 0.4,
-			BOMBLET_IMPULSE, 0.2, null, 1.0, 0.0, shot, GridBoard.NO_CELL, true))
+		lines.append_array(_blast(ctx, p, ammo.sub_radius, ammo.sub_damage, weapon.penetration * ammo.sub_penetration_mult,
+			ammo.sub_impulse, 0.2, null, 1.0, 0.0, shot, GridBoard.NO_CELL, true))
 	return lines
 
 
@@ -101,7 +98,7 @@ static func _hail_stone(ctx: BattleContext, from: Vector3, to: Vector3, weapon: 
 		await ctx.root.get_tree().create_timer(fall).timeout
 	if shot != null:
 		shot.blasts += 1
-	lines.append_array(_blast(ctx, to, ammo.sub_radius, ammo.sub_damage, weapon.penetration * 0.3, HAIL_IMPULSE, 0.2,
+	lines.append_array(_blast(ctx, to, ammo.sub_radius, ammo.sub_damage, weapon.penetration * ammo.sub_penetration_mult, ammo.sub_impulse, 0.2,
 		null, 1.0, 0.0, shot, GridBoard.NO_CELL, true))
 	pending[0] -= 1
 
@@ -128,7 +125,7 @@ static func meteor(ctx: BattleContext, point: Vector3, normal: Vector3, velocity
 		var ground := Vector3(at.x, ctx.board.surface_y(at) + 0.05, at.z)
 		if shot != null:
 			shot.blasts += 1
-		lines.append_array(_blast(ctx, ground, ammo.sub_radius, ammo.sub_damage, weapon.penetration * 0.4, METEOR_IMPULSE, 0.3,
+		lines.append_array(_blast(ctx, ground, ammo.sub_radius, ammo.sub_damage, weapon.penetration * ammo.sub_penetration_mult, ammo.sub_impulse, 0.3,
 			collider as Unit, 1.0, maxf(ammo.fire_radius_factor(), 0.5), shot, GridBoard.NO_CELL, true))
 		var cell := ctx.board.world_to_cell(ground)
 		if ctx.board.in_bounds(cell):

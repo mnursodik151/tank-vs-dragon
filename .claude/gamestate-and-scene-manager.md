@@ -4,6 +4,10 @@ Snapshot of the code as of Rev 7. Everything is built in code from one scene (`s
 Since Rev 16 there is a start menu scene (`scenes/start_menu.tscn`, the project's main scene) that fills the static `BattleConfig` (mode 1P / hot seat, side, tints) and loads `main.tscn`; still no autoloads. `Game` is the composition root, controllers come from `Game._make_controllers`, and
 "restart" is `get_tree().reload_current_scene()`. Battle end shows `VictoryScreen` (rematch / main menu). Related: [implementation-notes.md](implementation-notes.md), [actor-controls-and-actions.md](actor-controls-and-actions.md), [ui-ux.md](ui-ux.md).
 
+> **Rev 20**: `BattleContext` also holds `history` (`CommandHistory`) and per-team `rules_for(team)` (`BattleRules`); `TurnManager` records every action before it runs, calls `controller.holds_turn()` to keep a turn
+> open for undo, and `GameState` / `GridBoard` / `Intel` / `Unit` expose `capture()/restore()` for `BattleSnapshot`. `Game._spawn_units` builds `UnitProfile`s (run upgrades for the player's side) and `_setup_rules` fills the rules.
+> See [design-patterns.md](design-patterns.md).
+
 ## Who owns what
 
 | Piece | File | Kind | Owns |
@@ -30,6 +34,8 @@ Since Rev 16 there is a start menu scene (`scenes/start_menu.tscn`, the project'
 7. Fill the rest of `ctx`: `guide`, `root` (= Game, parent for shells/flashes), `camera`, `state`.
 8. Add `_turns`, `_player`, `_ai` as children, connect `battle_over` / `round_started` / `turn_started`, then
    `_turns.start(_ctx, {0: player-or-ai, 1: _ai})`. With `--ai-vs-ai` both teams use the same `AIController`.
+
+**Loading screen (Rev 19)**: the steps above run as phases (sky, terrain, board, units, final). When a window is up (not headless, not `--ai-vs-ai`, `Game.show_loading`) `LoadingScreen.attach` covers the screen and each phase `await`s one frame after naming itself (`_begin_phase`), so `_ready` is a coroutine; with no screen nothing suspends and the battle exists when `_ready` returns (tests rely on that). `_process`/input stay off (`_booting`) until the fade-out ends, then `_turns.start`.
 
 Gotcha: node order matters only for the `ctx` wiring above (`ctx.board` must be set before `_sight.setup`, which iterates board cells).
 
